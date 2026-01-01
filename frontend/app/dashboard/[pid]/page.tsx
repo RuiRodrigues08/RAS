@@ -1,6 +1,6 @@
 "use client";
 
-import { Download, LoaderCircle, OctagonAlert, Play } from "lucide-react";
+import { Download, LoaderCircle, OctagonAlert, Play, Share2, Link as LinkIcon } from "lucide-react";
 import { ProjectImageList } from "@/components/project-page/project-image-list";
 import { ViewToggle } from "@/components/project-page/view-toggle";
 import { AddImagesDialog } from "@/components/project-page/add-images-dialog";
@@ -31,6 +31,15 @@ import { useQueryClient } from "@tanstack/react-query";
 import { ModeToggle } from "@/components/project-page/mode-toggle";
 import { SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 export default function Project({
   params,
@@ -53,26 +62,32 @@ export default function Project({
   const path = usePathname();
   const sidebar = useSidebar();
   const isMobile = useIsMobile();
+
+  // Estados
   const [currentImage, setCurrentImage] = useState<ProjectImage | null>(null);
   const [processing, setProcessing] = useState<boolean>(false);
   const [processingProgress, setProcessingProgress] = useState<number>(0);
   const [processingSteps, setProcessingSteps] = useState<number>(1);
   const [waitingForPreview, setWaitingForPreview] = useState<string>("");
+  const [sharePermission, setSharePermission] = useState<"view" | "edit">("view");
+  const [inviteEmail, setInviteEmail] = useState("");
 
-  const totalProcessingSteps =
-    (project.data?.tools.length ?? 0) * (project.data?.imgs.length ?? 0);
-  const projectResults = useGetProjectResults(
-    session.user._id,
-    pid,
-    session.token,
-  );
+  const totalProcessingSteps = (project.data?.tools.length ?? 0) * (project.data?.imgs.length ?? 0);
+  const projectResults = useGetProjectResults(session.user._id, pid, session.token);
   const qc = useQueryClient();
 
+  // Função para gerar link de partilha
+  const handleGenerateLink = () => {
+    const url = `${window.location.origin}${path}?auth=${sharePermission}`;
+    navigator.clipboard.writeText(url);
+    toast({
+      title: "Link copiado!",
+      description: `Acesso de ${sharePermission === "view" ? "visualização" : "edição"} copiado para a área de transferência.`,
+    });
+  };
+
   useLayoutEffect(() => {
-    if (
-      !["edit", "results"].includes(mode) ||
-      !["grid", "carousel"].includes(view)
-    ) {
+    if (!["edit", "results"].includes(mode) || !["grid", "carousel"].includes(view)) {
       router.replace(path);
     }
   }, [mode, view, path, router, projectResults.data]);
@@ -80,13 +95,9 @@ export default function Project({
   useEffect(() => {
     function onProcessUpdate() {
       setProcessingSteps((prev) => prev + 1);
-
-      const progress = Math.min(
-        Math.round((processingSteps * 100) / totalProcessingSteps),
-        100,
-      );
-
+      const progress = Math.min(Math.round((processingSteps * 100) / totalProcessingSteps), 100);
       setProcessingProgress(progress);
+
       if (processingSteps >= totalProcessingSteps) {
         setTimeout(() => {
           projectResults.refetch().then(() => {
@@ -101,7 +112,6 @@ export default function Project({
     }
 
     let active = true;
-
     if (active && socket.data) {
       socket.data.on("process-update", () => {
         if (active) onProcessUpdate();
@@ -112,45 +122,23 @@ export default function Project({
       active = false;
       if (socket.data) socket.data.off("process-update", onProcessUpdate);
     };
-  }, [
-    pid,
-    processingSteps,
-    qc,
-    router,
-    session.token,
-    session.user._id,
-    socket.data,
-    totalProcessingSteps,
-    sidebar,
-    isMobile,
-    projectResults,
-  ]);
+  }, [pid, processingSteps, qc, router, session.token, session.user._id, socket.data, totalProcessingSteps, sidebar, isMobile, projectResults]);
 
-  if (project.isError)
-    return (
-      <div className="flex size-full justify-center items-center h-screen p-8">
-        <Alert
-          variant="destructive"
-          className="w-fit max-w-[40rem] text-wrap truncate"
-        >
-          <OctagonAlert className="size-4" />
-          <AlertTitle>{project.error.name}</AlertTitle>
-          <AlertDescription>{project.error.message}</AlertDescription>
-        </Alert>
-      </div>
-    );
+  if (project.isError) return (
+    <div className="flex size-full justify-center items-center h-screen p-8">
+      <Alert variant="destructive" className="w-fit max-w-[40rem]">
+        <OctagonAlert className="size-4" />
+        <AlertTitle>{project.error.name}</AlertTitle>
+        <AlertDescription>{project.error.message}</AlertDescription>
+      </Alert>
+    </div>
+  );
 
-  if (
-    project.isLoading ||
-    !project.data ||
-    projectResults.isLoading ||
-    !projectResults.data
-  )
-    return (
-      <div className="flex justify-center items-center h-screen">
-        <Loading />
-      </div>
-    );
+  if (project.isLoading || !project.data || projectResults.isLoading || !projectResults.data) return (
+    <div className="flex justify-center items-center h-screen">
+      <Loading />
+    </div>
+  );
 
   return (
     <ProjectProvider
@@ -162,43 +150,31 @@ export default function Project({
         {/* Header */}
         <div className="flex flex-col xl:flex-row justify-center items-start xl:items-center xl:justify-between border-b border-sidebar-border py-2 px-2 md:px-3 xl:px-4 h-fit gap-2">
           <div className="flex items-center justify-between w-full xl:w-auto gap-2">
-            <h1 className="text-lg font-semibold truncate">
-              {project.data.name}
-            </h1>
+            <h1 className="text-lg font-semibold truncate">{project.data.name}</h1>
             <div className="flex items-center gap-2 xl:hidden">
               <ViewToggle />
               <ModeToggle />
             </div>
           </div>
+
           <div className="flex items-center justify-between w-full xl:w-auto gap-2">
             <SidebarTrigger variant="outline" className="h-9 w-10 lg:hidden" />
             <div className="flex items-center gap-2 flex-wrap justify-end xl:justify-normal w-full xl:w-auto">
               {mode !== "results" && (
                 <>
                   <Button
-                    disabled={
-                      project.data.tools.length <= 0 || waitingForPreview !== ""
-                    }
+                    disabled={project.data.tools.length <= 0 || waitingForPreview !== ""}
                     className="inline-flex"
                     onClick={() => {
                       processProject.mutate(
-                        {
-                          uid: session.user._id,
-                          pid: project.data._id,
-                          token: session.token,
-                        },
+                        { uid: session.user._id, pid: project.data!._id, token: session.token },
                         {
                           onSuccess: () => {
                             setProcessing(true);
                             sidebar.setOpen(false);
                           },
-                          onError: (error) =>
-                            toast({
-                              title: "Ups! An error occurred.",
-                              description: error.message,
-                              variant: "destructive",
-                            }),
-                        },
+                          onError: (error) => toast({ title: "Ups!", description: error.message, variant: "destructive" }),
+                        }
                       );
                     }}
                   >
@@ -207,40 +183,80 @@ export default function Project({
                   <AddImagesDialog />
                 </>
               )}
+
               <Button
                 variant="outline"
                 className="px-3"
-                title="Download project"
                 onClick={() => {
-                  (mode === "edit"
-                    ? downloadProjectImages
-                    : downloadProjectResults
-                  ).mutate(
-                    {
-                      uid: session.user._id,
-                      pid: project.data._id,
-                      token: session.token,
-                      projectName: project.data.name,
-                    },
-                    {
-                      onSuccess: () => {
-                        toast({
-                          title: `Project ${project.data.name} downloaded.`,
-                        });
-                      },
-                    },
+                  (mode === "edit" ? downloadProjectImages : downloadProjectResults).mutate(
+                    { uid: session.user._id, pid: project.data!._id, token: session.token, projectName: project.data!.name },
+                    { onSuccess: () => toast({ title: "Download concluído." }) }
                   );
                 }}
               >
-                {(mode === "edit"
-                  ? downloadProjectImages
-                  : downloadProjectResults
-                ).isPending ? (
+                {(mode === "edit" ? downloadProjectImages : downloadProjectResults).isPending ? (
                   <LoaderCircle className="animate-spin" />
                 ) : (
                   <Download />
                 )}
               </Button>
+
+              {/* Share Dialog */}
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button variant="outline" className="px-3">
+                    <Share2 className="size-4" />
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[425px] bg-[#1e1e1e] text-white border-zinc-800">
+                  <DialogHeader>
+                    <div className="flex justify-between items-center">
+                      <DialogTitle className="text-sm font-normal">Share project</DialogTitle>
+                      <Button variant="ghost" size="sm" onClick={handleGenerateLink} className="text-blue-400 hover:text-blue-300">
+                        <LinkIcon className="h-3 w-3 mr-2" /> Copy link
+                      </Button>
+                    </div>
+                  </DialogHeader>
+                  <div className="grid gap-4 py-4">
+                    <div className="flex items-center gap-2">
+                      <Input
+                        value={inviteEmail}
+                        onChange={(e) => setInviteEmail(e.target.value)}
+                        placeholder="Add emails to invite..."
+                        className="bg-zinc-900 border-zinc-700 text-sm text-white"
+                      />
+                      <Button className="bg-white text-black hover:bg-zinc-200">Invite</Button>
+                    </div>
+                    <div className="space-y-4">
+                      <p className="text-xs text-zinc-400 font-medium">Who has access</p>
+                      <div className="flex items-center justify-between text-sm">
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 rounded-full bg-orange-600 flex items-center justify-center text-xs font-bold uppercase">
+                            {session.user.name?.[0] || "U"}
+                          </div>
+                          <div>
+                            <p className="font-medium">{session.user.name} (you)</p>
+                            <p className="text-xs text-zinc-500">{session.user.email}</p>
+                          </div>
+                        </div>
+                        <span className="text-zinc-500 text-xs">owner</span>
+                      </div>
+                      <div className="flex items-center justify-between border-t border-zinc-800 pt-4">
+                        <span className="text-xs text-zinc-400">Link permission:</span>
+                        <select
+                          value={sharePermission}
+                          onChange={(e) => setSharePermission(e.target.value as "view" | "edit")}
+                          className="bg-transparent text-xs text-blue-400 outline-none cursor-pointer"
+                        >
+                          <option value="view">can view</option>
+                          <option value="edit">can edit</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
+
               <div className="hidden xl:flex items-center gap-2">
                 <ViewToggle />
                 <ModeToggle />
@@ -248,15 +264,15 @@ export default function Project({
             </div>
           </div>
         </div>
+
         {/* Main Content */}
         <div className="h-full overflow-x-hidden flex">
           {mode !== "results" && <Toolbar />}
-          <ProjectImageList
-            setCurrentImageId={setCurrentImage}
-            results={projectResults.data}
-          />
+          <ProjectImageList setCurrentImageId={setCurrentImage} results={projectResults.data} />
         </div>
       </div>
+
+      {/* Processing Overlay */}
       <Transition
         show={processing}
         enter="transition-opacity ease-in duration-300"

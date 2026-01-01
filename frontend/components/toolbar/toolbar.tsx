@@ -29,15 +29,20 @@ import {
 } from "../ui/dialog";
 import { Eraser } from "lucide-react";
 import { useState } from "react";
+import { useProjectPermission } from "@/providers/project-provider";
+
 
 export function Toolbar() {
   const searchParams = useSearchParams();
   const view = searchParams.get("view") ?? "grid";
-  const disabled = view === "grid";
   const project = useProjectInfo();
   const session = useSession();
-
   const [open, setOpen] = useState<boolean>(false);
+
+ 
+  const permission = useProjectPermission();
+  const isReadOnly = permission === "view";
+  const disabled = view === "grid" || isReadOnly;
 
   const clearTools = useClearProjectTools(
     session.user._id,

@@ -9,6 +9,7 @@ import {
   Globe,
   ArrowRight,
   GalleryVerticalEnd,
+  Share2,
 } from "lucide-react";
 import NavUser from "@/components/nav-user";
 import { useSession } from "@/providers/session-provider";
@@ -59,7 +60,7 @@ export default function Home() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8 sm:mb-12">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4 mb-8 sm:mb-12">
           {[
             {
               icon: Brush,
@@ -81,11 +82,16 @@ export default function Home() {
               title: "100% Online",
               description: "Edit anywhere, anytime",
             },
+            {
+              icon: Share2,
+              title: "Share project",
+              description: "Share your projects with others easily",
+            }
           ].map((feature, index) => (
-            <Card key={index}>
-              <CardHeader>
+            <Card key={index} className="p-3 py-2">
+              <CardHeader className="p-2 pb-3">
                 <feature.icon className="h-8 w-8 text-primary mb-2" />
-                <CardTitle>{feature.title}</CardTitle>
+                <CardTitle className="text-sm">{feature.title}</CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-muted-foreground">
