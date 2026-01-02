@@ -2,6 +2,8 @@ import { api } from "./axios";
 import axios from "axios";
 import JSZip from "jszip";
 import { ToolNames, ToolParams } from "./tool-types";
+import { useQuery } from "@tanstack/react-query";
+import { io } from "socket.io-client";
 
 export interface Project {
   _id: string;
@@ -74,6 +76,23 @@ export const fetchProject = async (uid: string, pid: string, token: string) => {
     tools: response.data.tools,
   } as SingleProject;
 };
+
+export const useGetSocket = (token: string) => {
+  return useQuery({
+    queryKey: ["socket", token],
+    queryFn: () =>
+      io("http://localhost:8080", {
+        path: "/socket.io", 
+        auth: {
+          token: token,
+        },
+        transports: ["websocket"], 
+      }),
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+  });
+};
+
 
 export const addProject = async ({
   uid,
