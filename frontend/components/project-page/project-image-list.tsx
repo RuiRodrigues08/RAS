@@ -1,6 +1,5 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import {
   Carousel,
   CarouselContent,
@@ -9,22 +8,23 @@ import {
   CarouselPrevious,
   type CarouselApi,
 } from "@/components/ui/carousel";
-import { useGetSocket } from "@/lib/queries/projects";
-import { useProjectInfo } from "@/providers/project-provider";
-import { useRouter, useSearchParams } from "next/navigation";
-import { useSession } from "@/providers/session-provider";
-import {
-  Dialog,
-  DialogHeader,
-  DialogTitle,
-  DialogContent,
-  DialogFooter,
-} from "../ui/dialog";
-import Image from "next/image";
 import { useToast } from "@/hooks/use-toast";
 import * as ProjectTypes from "@/lib/projects";
-import { ProjectImage } from "./project-image";
+import { useGetSocket } from "@/lib/queries/projects";
+import { useProjectInfo } from "@/providers/project-provider";
+import { useSession } from "@/providers/session-provider";
 import { useQueryClient } from "@tanstack/react-query";
+import Image from "next/image";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "../ui/dialog";
+import { ProjectImage } from "./project-image";
 import ProjectText from "./project-text";
 
 export function ProjectImageList({
@@ -174,7 +174,7 @@ export function ProjectImageList({
                       >
                         <ProjectImage image={image} />
                       </button>
-                    ),
+                    )
                   )}
                   {mode === "results" &&
                     results.texts.map((text, index) => (
@@ -185,7 +185,7 @@ export function ProjectImageList({
                           setJumpTo(
                             (mode === "results"
                               ? results.imgs.length
-                              : project.imgs.length) + index,
+                              : project.imgs.length) + index
                           );
                           router.push(`?mode=${mode}&view=carousel`);
                           qc.invalidateQueries({

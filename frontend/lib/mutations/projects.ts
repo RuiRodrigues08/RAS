@@ -3,17 +3,18 @@ import {
   addProject,
   addProjectImages,
   addProjectTool,
+  cancelProcessProject,
   clearProjectTools,
   deleteProject,
   deleteProjectImages,
   deleteProjectTool,
-  downloadProjectImages,
   downloadProjectImage,
+  downloadProjectImages,
   downloadProjectResults,
+  previewProjectImage,
   processProject,
   updateProject,
   updateProjectTool,
-  previewProjectImage,
 } from "../projects";
 import { createBlobUrlFromFile, downloadBlob } from "../utils";
 
@@ -75,7 +76,7 @@ export const useUpdateProject = (uid: string, pid: string, token: string) => {
 export const useAddProjectImages = (
   uid: string,
   pid: string,
-  token: string,
+  token: string
 ) => {
   const qc = useQueryClient();
   return useMutation({
@@ -96,7 +97,7 @@ export const useAddProjectImages = (
 export const useDeleteProjectImages = (
   uid: string,
   pid: string,
-  token: string,
+  token: string
 ) => {
   const qc = useQueryClient();
   return useMutation({
@@ -121,7 +122,7 @@ export const useDownloadProjectImage = (edited?: boolean) => {
       const blobUrl = await createBlobUrlFromFile(image.file);
       downloadBlob(
         edited ? image.name.split(".")[0] + "_edited" : image.name,
-        blobUrl,
+        blobUrl
       );
     },
   });
@@ -148,9 +149,15 @@ export const useDownloadProjectResults = () => {
 };
 
 export const useProcessProject = () => {
-  return useMutation({
+  const start = useMutation({
     mutationFn: processProject,
   });
+
+  const cancel = useMutation({
+    mutationFn: cancelProcessProject,
+  });
+
+  return { start, cancel };
 };
 
 export const useAddProjectTool = (uid: string, pid: string, token: string) => {
@@ -179,7 +186,7 @@ export const usePreviewProjectResult = () => {
 export const useUpdateProjectTool = (
   uid: string,
   pid: string,
-  token: string,
+  token: string
 ) => {
   const qc = useQueryClient();
   return useMutation({
@@ -200,7 +207,7 @@ export const useUpdateProjectTool = (
 export const useDeleteProjectTool = (
   uid: string,
   pid: string,
-  token: string,
+  token: string
 ) => {
   const qc = useQueryClient();
   return useMutation({
@@ -218,7 +225,7 @@ export const useDeleteProjectTool = (
 export const useClearProjectTools = (
   uid: string,
   pid: string,
-  token: string,
+  token: string
 ) => {
   const qc = useQueryClient();
   return useMutation({
