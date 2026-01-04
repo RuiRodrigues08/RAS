@@ -148,6 +148,7 @@ services:
     volumes:
       - image_data:/app/images
       - ./projects:/app
+      - /app/node_modules
 
   users_mongoDB:
     image: mongo:4.4
