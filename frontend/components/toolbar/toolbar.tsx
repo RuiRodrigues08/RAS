@@ -34,16 +34,18 @@ import { useState } from "react";
 export function Toolbar() {
   const searchParams = useSearchParams();
   const view = searchParams.get("view") ?? "grid";
+  const authParam = searchParams.get("auth");
   const project = useProjectInfo();
   const session = useSession();
   const [open, setOpen] = useState<boolean>(false);
 
-  const disabled = view === "grid";
+  // Disable if grid view OR if auth=view (read-only)
+  const disabled = view === "grid" || authParam === "view";
 
   const clearTools = useClearProjectTools(
-    session.user._id,
+    session?.user?._id ?? "",
     project._id,
-    session.token,
+    session?.token ?? "",
   );
 
   return (
@@ -86,7 +88,9 @@ export function Toolbar() {
           <DialogFooter>
             <Button
               variant="destructive"
+              disabled={!session}
               onClick={() => {
+                if (!session) return;
                 clearTools.mutate({
                   uid: session.user._id,
                   pid: project._id,

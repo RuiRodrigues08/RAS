@@ -296,6 +296,49 @@ router.get("/:user", (req, res, next) => {
     .catch((_) => res.status(500).jsonp("Error acquiring user's projects"));
 });
 
+// Get a shared project (without user_id validation)
+router.get("/shared/:project", (req, res, next) => {
+  Project.getById(req.params.project)
+    .then(async (project) => {
+      if (!project) {
+        res.status(404).jsonp("Project not found");
+        return;
+      }
+
+      const response = {
+        _id: project._id,
+        user_id: project.user_id,
+        name: project.name,
+        tools: project.tools,
+        imgs: [],
+      };
+
+      for (let img of project.imgs) {
+        try {
+          const resp = await get_image_host(
+            project.user_id,
+            req.params.project,
+            "src",
+            img.og_img_key
+          );
+          const url = resp.data.url;
+
+          response["imgs"].push({
+            _id: img._id,
+            name: path.basename(img.og_uri),
+            url: url,
+          });
+        } catch (_) {
+          res.status(404).jsonp(`Error acquiring image's url`);
+          return;
+        }
+      }
+
+      res.status(200).jsonp(response);
+    })
+    .catch((_) => res.status(501).jsonp(`Error acquiring shared project`));
+});
+
 // Get a specific user's project
 router.get("/:user/:project", (req, res, next) => {
   Project.getOne(req.params.user, req.params.project)

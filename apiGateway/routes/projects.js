@@ -79,6 +79,21 @@ router.get("/:user", auth.checkToken, function (req, res, next) {
 });
 
 /**
+ * Get shared project (without user_id validation)
+ * @body Empty
+ * @returns The required project
+ * NOTE: Uses optional authentication - works with or without token
+ */
+router.get("/shared/:project", auth.optionalToken, function (req, res, next) {
+  axios
+    .get(projectsURL + `shared/${req.params.project}`, {
+      httpsAgent: httpsAgent,
+    })
+    .then((resp) => res.status(200).jsonp(resp.data))
+    .catch((err) => res.status(500).jsonp("Error getting shared project"));
+});
+
+/**
  * Get user's project
  * @body Empty
  * @returns The required project

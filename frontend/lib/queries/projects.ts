@@ -2,11 +2,13 @@ import { useQuery } from "@tanstack/react-query";
 import {
   fetchProjects,
   fetchProject,
+  fetchSharedProject,
   getProjectImages,
   ProjectImage,
   fetchProjectResults,
 } from "../projects";
 import { io } from "socket.io-client";
+import { api } from "../axios";
 
 export const useGetProjects = (uid: string, token: string) => {
   return useQuery({
@@ -19,6 +21,13 @@ export const useGetProject = (uid: string, pid: string, token: string) => {
   return useQuery({
     queryKey: ["project", uid, pid, token],
     queryFn: () => fetchProject(uid, pid, token),
+  });
+};
+
+export const useGetSharedProject = (pid: string, token?: string) => {
+  return useQuery({
+    queryKey: ["sharedProject", pid, token],
+    queryFn: () => fetchSharedProject(pid, token),
   });
 };
 
@@ -57,5 +66,21 @@ export const useGetProjectResults = (
   return useQuery({
     queryKey: ["projectResults", uid, pid, token],
     queryFn: () => fetchProjectResults(uid, pid, token),
+  });
+};
+
+
+export const fetchProjectUsers = async (uid: string, pid: string, token: string) => {
+  const response = await api.get(`/projects/${uid}/${pid}/users`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return response.data;
+};
+
+
+export const useGetProjectUsers = (uid: string, pid: string, token: string) => {
+  return useQuery({
+    queryKey: ["projectUsers", uid, pid, token],
+    queryFn: () => fetchProjectUsers(uid, pid, token),
   });
 };

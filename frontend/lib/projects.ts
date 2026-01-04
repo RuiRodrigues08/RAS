@@ -77,6 +77,30 @@ export const fetchProject = async (uid: string, pid: string, token: string) => {
   } as SingleProject;
 };
 
+export const fetchSharedProject = async (pid: string, token?: string) => {
+  const headers: Record<string, string> = {};
+  
+  
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+
+  const response = await api.get<SingleProject>(`/projects/shared/${pid}`, {
+    headers,
+  });
+
+  if (response.status !== 200 || !response.data)
+    throw new Error("Failed to fetch shared project");
+
+  return {
+    _id: response.data._id,
+    user_id: response.data.user_id,
+    name: response.data.name,
+    imgs: response.data.imgs,
+    tools: response.data.tools,
+  } as SingleProject;
+};
+
 export const useGetSocket = (token: string) => {
   return useQuery({
     queryKey: ["socket", token],

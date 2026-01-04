@@ -7,9 +7,10 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { OctagonAlert } from "lucide-react";
 import { useGetSession } from "@/lib/queries/session";
 import { useUpdateSession } from "@/lib/mutations/session";
+import { useSearchParams, usePathname } from "next/navigation";
 
 interface SessionContextData {
-  session: SessionData;
+  session: SessionData | null;
 }
 
 const SessionContext = createContext<SessionContextData | undefined>(undefined);
@@ -17,6 +18,12 @@ const SessionContext = createContext<SessionContextData | undefined>(undefined);
 export function SessionProvider({ children }: { children: React.ReactNode }) {
   const session = useGetSession();
   const updateSession = useUpdateSession();
+  const searchParams = useSearchParams();
+  const pathname = usePathname();
+  
+  // Check if accessing a shared project (has ?auth parameter)
+  const isSharedProject = searchParams.get("auth") !== null;
+  const isProjectPage = pathname?.includes("/dashboard/") && pathname !== "/dashboard";
 
   useEffect(() => {
     const session = localStorage.getItem("session");
@@ -29,6 +36,15 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Allow access to shared projects without session
+  if (!session.data && isSharedProject && isProjectPage) {
+    return (
+      <SessionContext.Provider value={{ session: null }}>
+        {children}
+      </SessionContext.Provider>
+    );
+  }
 
   if (!session.data)
     return (

@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Toolbar } from "@/components/toolbar/toolbar";
 import {
   useGetProject,
+  useGetSharedProject,
   useGetProjectResults,
   useGetSocket,
 } from "@/lib/queries/projects";
@@ -38,6 +39,12 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export default function Project({
   params,
@@ -47,13 +54,22 @@ export default function Project({
   const resolvedParams = use(params);
   const session = useSession();
   const { pid } = resolvedParams;
-  const project = useGetProject(session.user._id, pid, session.token);
+  const searchParams = useSearchParams();
+  const isSharedProject = searchParams.get("auth") !== null;
+  
+
+  const ownProject = useGetProject(
+    session?.user?._id ?? "", 
+    pid, 
+    session?.token ?? ""
+  );
+  const sharedProject = useGetSharedProject(pid, session?.token);
+  const project = isSharedProject ? sharedProject : ownProject;
   const downloadProjectImages = useDownloadProject();
   const processProject = useProcessProject();
   const downloadProjectResults = useDownloadProjectResults();
   const { toast } = useToast();
-  const socket = useGetSocket(session.token);
-  const searchParams = useSearchParams();
+  const socket = useGetSocket(session?.token ?? "");
   const view = searchParams.get("view") ?? "grid";
   const mode = searchParams.get("mode") ?? "edit";
   const router = useRouter();
@@ -61,19 +77,18 @@ export default function Project({
   const sidebar = useSidebar();
   const isMobile = useIsMobile();
 
-  // --- ESTADOS ---
   const [currentImage, setCurrentImage] = useState<ProjectImage | null>(null);
   const [processing, setProcessing] = useState<boolean>(false);
   const [processingProgress, setProcessingProgress] = useState<number>(0);
   const [processingSteps, setProcessingSteps] = useState<number>(1);
   const [waitingForPreview, setWaitingForPreview] = useState<string>("");
   
-  // Estados para RF51 e RF52 (Partilha)
+  
   const [sharePermission, setSharePermission] = useState<"view" | "edit">("view");
   const [generatedLink, setGeneratedLink] = useState("");
-  const [isCopied, setIsCopied] = useState(false); // Novo: Para animação de cópia
+  const [isCopied, setIsCopied] = useState(false); 
   
-  // Mock de usuários com acesso (você pode substituir por dados reais da API)
+  // TROCAR DEPOIS PARA OS USERS
   const [sharedUsers, setSharedUsers] = useState([
     { id: 1, name: "Flavio Costa", permission: "owner" as const },
     { id: 2, name: "Rosa Silva", permission: "edit" as const },
@@ -81,18 +96,19 @@ export default function Project({
     { id: 4, name: "Rodrigo Gonçalves", permission: "edit" as const },
   ]);
 
-  // Verifica permissão atual (RF45)
-  // Nota: Precisas de garantir que o hook useProjectPermission está a funcionar, 
-  // senão usa: const isReadOnly = searchParams.get("auth") === "view";
+
   const isReadOnly = searchParams.get("auth") === "view"; 
 
   const totalProcessingSteps = (project.data?.tools.length ?? 0) * (project.data?.imgs.length ?? 0);
-  const projectResults = useGetProjectResults(session.user._id, pid, session.token);
+  const projectResults = useGetProjectResults(
+    session?.user?._id ?? "", 
+    pid, 
+    session?.token ?? ""
+  );
   const qc = useQueryClient();
 
-  // --- LÓGICA DE PARTILHA (RF52) ---
+ 
   const handleGenerateLink = () => {
-    // Gera o link apontando para o Nginx (localhost:8080)
     const url = `${window.location.origin}${path}?auth=${sharePermission}`;
     setGeneratedLink(url);
     navigator.clipboard.writeText(url);
@@ -101,8 +117,22 @@ export default function Project({
     setIsCopied(true);
     toast({ title: "Link copied to clipboard!" });
     
-    // Reseta o ícone após 2 segundos
+    
     setTimeout(() => setIsCopied(false), 2000);
+  };
+
+  const handleChangePermission = (userId: number, newPermission: "edit" | "view") => {
+    setSharedUsers(users => 
+      users.map(user => 
+        user.id === userId ? { ...user, permission: newPermission } : user
+      )
+    );
+    toast({ title: "Permissão atualizada" });
+  };
+
+  const handleRemoveAccess = (userId: number) => {
+    setSharedUsers(users => users.filter(user => user.id !== userId));
+    toast({ title: "Acesso removido" });
   };
 
   useLayoutEffect(() => {
@@ -141,7 +171,7 @@ export default function Project({
       active = false;
       if (socket.data) socket.data.off("process-update", onProcessUpdate);
     };
-  }, [pid, processingSteps, qc, router, session.token, session.user._id, socket.data, totalProcessingSteps, sidebar, isMobile, projectResults]);
+  }, [pid, processingSteps, qc, router, session?.token, session?.user?._id, socket.data, totalProcessingSteps, sidebar, isMobile, projectResults]);
 
   if (project.isError) return (
     <div className="flex size-full justify-center items-center h-screen p-8">
@@ -182,10 +212,14 @@ export default function Project({
               {mode !== "results" && (
                 <>
                   <Button
-                    // RF45: Bloqueia o botão Apply se for apenas leitura
-                    disabled={project.data.tools.length <= 0 || waitingForPreview !== "" || isReadOnly}
+                    // RF45: Bloqueia o botão Apply se for apenas leitura OU sem sessão (requer backend)
+                    disabled={project.data.tools.length <= 0 || waitingForPreview !== "" || isReadOnly || !session}
                     className="inline-flex"
                     onClick={() => {
+                      if (!session) {
+                        toast({ title: "Autenticação necessária", description: "Faça login para processar o projeto.", variant: "destructive" });
+                        return;
+                      }
                       processProject.mutate(
                         { uid: session.user._id, pid: project.data!._id, token: session.token },
                         {
@@ -200,14 +234,20 @@ export default function Project({
                   >
                     <Play /> Apply
                   </Button>
-                  <AddImagesDialog />
+                  {/* AddImagesDialog só mostra se não for read-only (pode ser edit sem sessão) */}
+                  {!isReadOnly && <AddImagesDialog />}
                 </>
               )}
 
               <Button
                 variant="outline"
                 className="px-3"
+                disabled={!session}
                 onClick={() => {
+                  if (!session) {
+                    toast({ title: "Autenticação necessária", description: "Faça login para fazer download.", variant: "destructive" });
+                    return;
+                  }
                   (mode === "edit" ? downloadProjectImages : downloadProjectResults).mutate(
                     { uid: session.user._id, pid: project.data!._id, token: session.token, projectName: project.data!.name },
                     { onSuccess: () => toast({ title: "Download concluído." }) }
@@ -221,73 +261,53 @@ export default function Project({
                 )}
               </Button>
 
-              {/* Share Dialog (RF51 e RF52) */}
-              <Dialog>
-                <DialogTrigger asChild>
-                  <Button variant="outline" className="px-3" title="Partilhar">
-                    <Share2 className="size-4" />
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="sm:max-w-[500px] bg-[#1a1a1a] text-white border-zinc-700">
-                  <DialogHeader className="border-b border-zinc-800 pb-4">
-                    <DialogTitle className="text-lg font-semibold">Share project</DialogTitle>
+              
+              {session && (
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" className="px-3" title="Partilhar">
+                      <Share2 className="size-4" />
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-[500px] bg-[#16151C] text-white border-zinc-800 p-0">
+                    <DialogHeader className="border-b border-zinc-800 px-6 py-4">
+                      <DialogTitle className="text-lg font-semibold">Share project</DialogTitle>
                   </DialogHeader>
                   
-                  <div className="grid gap-4 py-4">
-                    {/* RF51: Seleção de Permissão */}
-                    <div className="flex items-center justify-between p-3 bg-zinc-900/50 rounded-lg border border-zinc-800">
-                      <span className="text-sm text-zinc-400">Escolha que tipo de permissão deseja atribuir ao link gerado</span>
-                      <button
-                        onClick={() => setSharePermission(sharePermission === "view" ? "edit" : "view")}
-                        className="flex items-center gap-2 text-sm text-blue-400 hover:text-blue-300 font-medium"
+                  <div className="px-6 pb-6 pt-3">
+                    {/* Botão Copiar Link */}
+                    <div className="flex flex-col gap-3 pb-8 border-b border-zinc-800">
+                      <p className="text-sm text-zinc-300 leading-relaxed">
+                        Copie o link para compartilhar este projeto
+                      </p>
+                      
+                      <Button 
+                        onClick={handleGenerateLink}
+                        className="gap-2 h-11 px-6 bg-zinc-700 hover:bg-zinc-600 text-white border-0 w-fit"
                       >
-                        Editar
-                        <ChevronDown className="h-4 w-4" />
-                      </button>
+                        <Copy className="h-4 w-4" />
+                        Copiar link
+                      </Button>
                     </div>
 
-                    {/* RF52: Botão de Copiar Link */}
-                    <Button 
-                      onClick={handleGenerateLink} 
-                      variant="outline"
-                      className="w-full justify-start gap-2 bg-transparent border-zinc-700 hover:bg-zinc-800 text-white"
-                    >
-                      <Copy className="h-4 w-4" />
-                      Copiar link
-                    </Button>
-
                     {/* Lista de Pessoas com Acesso */}
-                    <div className="space-y-3">
-                      <h3 className="text-sm font-semibold">Pessoas com acesso</h3>
-                      <div className="space-y-2 max-h-64 overflow-y-auto">
+                    <div className="pt-8">
+                      <h3 className="text-base font-semibold mb-4">Pessoas com acesso</h3>
+                      <div className="space-y-0 max-h-[300px] overflow-y-auto pr-2">
                         {sharedUsers.map((user) => (
                           <div
                             key={user.id}
-                            className="flex items-center justify-between p-2 hover:bg-zinc-900/50 rounded-lg transition-colors"
+                            className="flex items-center justify-between py-3 hover:bg-zinc-900/30 rounded-lg px-2 -mx-2 transition-colors"
                           >
-                            <span className="text-sm font-medium">{user.name}</span>
-                            <div className="relative group">
-                              <button className="flex items-center gap-1 text-sm text-zinc-400 hover:text-white">
-                                {user.permission === "owner" ? "Owner" : 
-                                 user.permission === "edit" ? "Editar" : "Visualizar"}
-                                <ChevronDown className="h-3 w-3" />
-                              </button>
-                              {user.permission !== "owner" && (
-                                <div className="absolute right-0 mt-1 w-40 bg-zinc-800 rounded-md shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10">
-                                  <div className="py-1">
-                                    <button className="block w-full text-left px-4 py-2 text-sm text-white hover:bg-zinc-700">
-                                      Editar
-                                    </button>
-                                    <button className="block w-full text-left px-4 py-2 text-sm text-white hover:bg-zinc-700">
-                                      Visualizar
-                                    </button>
-                                    <button className="block w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-zinc-700">
-                                      Remover acesso
-                                    </button>
-                                  </div>
-                                </div>
-                              )}
-                            </div>
+                            <span className="text-base font-medium">{user.name}</span>
+                            
+                            <span className="text-base text-zinc-400 font-medium">
+                              {user.permission === "owner" 
+                                ? "Owner" 
+                                : user.permission === "edit" 
+                                ? "Editar" 
+                                : "Visualizar"}
+                            </span>
                           </div>
                         ))}
                       </div>
@@ -295,6 +315,7 @@ export default function Project({
                   </div>
                 </DialogContent>
               </Dialog>
+              )}
 
               <div className="hidden xl:flex items-center gap-2">
                 <ViewToggle />

@@ -27,6 +27,7 @@ export function AddImagesDialog() {
 
   const { _id: pid } = useProjectInfo();
   const session = useSession();
+  
   const addImages = useAddProjectImages(
     session.user._id,
     pid as string,
