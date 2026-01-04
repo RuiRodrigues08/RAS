@@ -2,10 +2,12 @@
 
 import { ProjectImage, SingleProject } from "@/lib/projects";
 import { createContext, useContext } from "react";
+import { useSearchParams } from "next/navigation"; // 1. Import necessário
 
 interface ProjectContextData {
   project: SingleProject;
   currentImage: ProjectImage | null;
+  permission: "view" | "edit"; // 2. Nova propriedade no contexto
   preview: {
     waiting: string;
     setWaiting: (waiting: string) => void;
@@ -28,8 +30,16 @@ export function ProjectProvider({
     setWaiting: (waiting: string) => void;
   };
 }) {
+  // 3. Lógica para detetar a permissão via URL (RF45)
+  const searchParams = useSearchParams();
+  const authParam = searchParams.get("auth");
+  
+  // Se a URL tiver ?auth=view, a permissão é "view". Caso contrário, é "edit".
+  const permission = authParam === "view" ? "view" : "edit";
+
   return (
-    <ProjectContext.Provider value={{ project, currentImage, preview }}>
+    // Passamos a 'permission' para baixo na árvore de componentes
+    <ProjectContext.Provider value={{ project, currentImage, preview, permission }}>
       {children}
     </ProjectContext.Provider>
   );
@@ -57,4 +67,13 @@ export function usePreview() {
     throw new Error("usePreview() must be used within a ProjectProvider");
   }
   return context.preview;
+}
+
+// 4. O novo Hook que faltava
+export function useProjectPermission() {
+  const context = useContext(ProjectContext);
+  if (context === undefined) {
+    throw new Error("useProjectPermission() must be used within a ProjectProvider");
+  }
+  return context.permission;
 }

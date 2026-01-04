@@ -1,6 +1,6 @@
 "use client";
 
-import { Download, LoaderCircle, OctagonAlert, Play, Share2, Link as LinkIcon } from "lucide-react";
+import { Download, LoaderCircle, OctagonAlert, Play, Share2, Link as LinkIcon, Check, ChevronDown, Copy } from "lucide-react";
 import { ProjectImageList } from "@/components/project-page/project-image-list";
 import { ViewToggle } from "@/components/project-page/view-toggle";
 import { AddImagesDialog } from "@/components/project-page/add-images-dialog";
@@ -12,7 +12,7 @@ import {
   useGetSocket,
 } from "@/lib/queries/projects";
 import Loading from "@/components/loading";
-import { ProjectProvider } from "@/providers/project-provider";
+import { ProjectProvider, useProjectPermission } from "@/providers/project-provider";
 import { use, useEffect, useLayoutEffect, useState } from "react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useSession } from "@/providers/session-provider";
@@ -31,11 +31,9 @@ import { useQueryClient } from "@tanstack/react-query";
 import { ModeToggle } from "@/components/project-page/mode-toggle";
 import { SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { Input } from "@/components/ui/input";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -63,27 +61,48 @@ export default function Project({
   const sidebar = useSidebar();
   const isMobile = useIsMobile();
 
-  // Estados
+  // --- ESTADOS ---
   const [currentImage, setCurrentImage] = useState<ProjectImage | null>(null);
   const [processing, setProcessing] = useState<boolean>(false);
   const [processingProgress, setProcessingProgress] = useState<number>(0);
   const [processingSteps, setProcessingSteps] = useState<number>(1);
   const [waitingForPreview, setWaitingForPreview] = useState<string>("");
+  
+  // Estados para RF51 e RF52 (Partilha)
   const [sharePermission, setSharePermission] = useState<"view" | "edit">("view");
-  const [inviteEmail, setInviteEmail] = useState("");
+  const [generatedLink, setGeneratedLink] = useState("");
+  const [isCopied, setIsCopied] = useState(false); // Novo: Para animação de cópia
+  
+  // Mock de usuários com acesso (você pode substituir por dados reais da API)
+  const [sharedUsers, setSharedUsers] = useState([
+    { id: 1, name: "Flavio Costa", permission: "owner" as const },
+    { id: 2, name: "Rosa Silva", permission: "edit" as const },
+    { id: 3, name: "Constança Gonçalves", permission: "view" as const },
+    { id: 4, name: "Rodrigo Gonçalves", permission: "edit" as const },
+  ]);
+
+  // Verifica permissão atual (RF45)
+  // Nota: Precisas de garantir que o hook useProjectPermission está a funcionar, 
+  // senão usa: const isReadOnly = searchParams.get("auth") === "view";
+  const isReadOnly = searchParams.get("auth") === "view"; 
 
   const totalProcessingSteps = (project.data?.tools.length ?? 0) * (project.data?.imgs.length ?? 0);
   const projectResults = useGetProjectResults(session.user._id, pid, session.token);
   const qc = useQueryClient();
 
-  // Função para gerar link de partilha
+  // --- LÓGICA DE PARTILHA (RF52) ---
   const handleGenerateLink = () => {
+    // Gera o link apontando para o Nginx (localhost:8080)
     const url = `${window.location.origin}${path}?auth=${sharePermission}`;
+    setGeneratedLink(url);
     navigator.clipboard.writeText(url);
-    toast({
-      title: "Link copiado!",
-      description: `Acesso de ${sharePermission === "view" ? "visualização" : "edição"} copiado para a área de transferência.`,
-    });
+    
+    // Feedback visual
+    setIsCopied(true);
+    toast({ title: "Link copied to clipboard!" });
+    
+    // Reseta o ícone após 2 segundos
+    setTimeout(() => setIsCopied(false), 2000);
   };
 
   useLayoutEffect(() => {
@@ -163,7 +182,8 @@ export default function Project({
               {mode !== "results" && (
                 <>
                   <Button
-                    disabled={project.data.tools.length <= 0 || waitingForPreview !== ""}
+                    // RF45: Bloqueia o botão Apply se for apenas leitura
+                    disabled={project.data.tools.length <= 0 || waitingForPreview !== "" || isReadOnly}
                     className="inline-flex"
                     onClick={() => {
                       processProject.mutate(
@@ -201,56 +221,75 @@ export default function Project({
                 )}
               </Button>
 
-              {/* Share Dialog */}
+              {/* Share Dialog (RF51 e RF52) */}
               <Dialog>
                 <DialogTrigger asChild>
-                  <Button variant="outline" className="px-3">
+                  <Button variant="outline" className="px-3" title="Partilhar">
                     <Share2 className="size-4" />
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="sm:max-w-[425px] bg-[#1e1e1e] text-white border-zinc-800">
-                  <DialogHeader>
-                    <div className="flex justify-between items-center">
-                      <DialogTitle className="text-sm font-normal">Share project</DialogTitle>
-                      <Button variant="ghost" size="sm" onClick={handleGenerateLink} className="text-blue-400 hover:text-blue-300">
-                        <LinkIcon className="h-3 w-3 mr-2" /> Copy link
-                      </Button>
-                    </div>
+                <DialogContent className="sm:max-w-[500px] bg-[#1a1a1a] text-white border-zinc-700">
+                  <DialogHeader className="border-b border-zinc-800 pb-4">
+                    <DialogTitle className="text-lg font-semibold">Share project</DialogTitle>
                   </DialogHeader>
+                  
                   <div className="grid gap-4 py-4">
-                    <div className="flex items-center gap-2">
-                      <Input
-                        value={inviteEmail}
-                        onChange={(e) => setInviteEmail(e.target.value)}
-                        placeholder="Add emails to invite..."
-                        className="bg-zinc-900 border-zinc-700 text-sm text-white"
-                      />
-                      <Button className="bg-white text-black hover:bg-zinc-200">Invite</Button>
+                    {/* RF51: Seleção de Permissão */}
+                    <div className="flex items-center justify-between p-3 bg-zinc-900/50 rounded-lg border border-zinc-800">
+                      <span className="text-sm text-zinc-400">Escolha que tipo de permissão deseja atribuir ao link gerado</span>
+                      <button
+                        onClick={() => setSharePermission(sharePermission === "view" ? "edit" : "view")}
+                        className="flex items-center gap-2 text-sm text-blue-400 hover:text-blue-300 font-medium"
+                      >
+                        Editar
+                        <ChevronDown className="h-4 w-4" />
+                      </button>
                     </div>
-                    <div className="space-y-4">
-                      <p className="text-xs text-zinc-400 font-medium">Who has access</p>
-                      <div className="flex items-center justify-between text-sm">
-                        <div className="flex items-center gap-2">
-                          <div className="w-8 h-8 rounded-full bg-orange-600 flex items-center justify-center text-xs font-bold uppercase">
-                            {session.user.name?.[0] || "U"}
+
+                    {/* RF52: Botão de Copiar Link */}
+                    <Button 
+                      onClick={handleGenerateLink} 
+                      variant="outline"
+                      className="w-full justify-start gap-2 bg-transparent border-zinc-700 hover:bg-zinc-800 text-white"
+                    >
+                      <Copy className="h-4 w-4" />
+                      Copiar link
+                    </Button>
+
+                    {/* Lista de Pessoas com Acesso */}
+                    <div className="space-y-3">
+                      <h3 className="text-sm font-semibold">Pessoas com acesso</h3>
+                      <div className="space-y-2 max-h-64 overflow-y-auto">
+                        {sharedUsers.map((user) => (
+                          <div
+                            key={user.id}
+                            className="flex items-center justify-between p-2 hover:bg-zinc-900/50 rounded-lg transition-colors"
+                          >
+                            <span className="text-sm font-medium">{user.name}</span>
+                            <div className="relative group">
+                              <button className="flex items-center gap-1 text-sm text-zinc-400 hover:text-white">
+                                {user.permission === "owner" ? "Owner" : 
+                                 user.permission === "edit" ? "Editar" : "Visualizar"}
+                                <ChevronDown className="h-3 w-3" />
+                              </button>
+                              {user.permission !== "owner" && (
+                                <div className="absolute right-0 mt-1 w-40 bg-zinc-800 rounded-md shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10">
+                                  <div className="py-1">
+                                    <button className="block w-full text-left px-4 py-2 text-sm text-white hover:bg-zinc-700">
+                                      Editar
+                                    </button>
+                                    <button className="block w-full text-left px-4 py-2 text-sm text-white hover:bg-zinc-700">
+                                      Visualizar
+                                    </button>
+                                    <button className="block w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-zinc-700">
+                                      Remover acesso
+                                    </button>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
                           </div>
-                          <div>
-                            <p className="font-medium">{session.user.name} (you)</p>
-                            <p className="text-xs text-zinc-500">{session.user.email}</p>
-                          </div>
-                        </div>
-                        <span className="text-zinc-500 text-xs">owner</span>
-                      </div>
-                      <div className="flex items-center justify-between border-t border-zinc-800 pt-4">
-                        <span className="text-xs text-zinc-400">Link permission:</span>
-                        <select
-                          value={sharePermission}
-                          onChange={(e) => setSharePermission(e.target.value as "view" | "edit")}
-                          className="bg-transparent text-xs text-blue-400 outline-none cursor-pointer"
-                        >
-                          <option value="view">can view</option>
-                          <option value="edit">can edit</option>
-                        </select>
+                        ))}
                       </div>
                     </div>
                   </div>
@@ -267,6 +306,7 @@ export default function Project({
 
         {/* Main Content */}
         <div className="h-full overflow-x-hidden flex">
+          {/* RF45: Toolbar já deve ter a lógica interna de opacidade, mas aqui também garantimos que renderiza */}
           {mode !== "results" && <Toolbar />}
           <ProjectImageList setCurrentImageId={setCurrentImage} results={projectResults.data} />
         </div>
