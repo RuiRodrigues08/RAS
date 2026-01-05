@@ -1,20 +1,5 @@
-import { LoaderCircle, Sparkle, type LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useRouter } from "next/navigation";
-import { useSession } from "@/providers/session-provider";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuLabel,
-  DropdownMenuTrigger,
-  DropdownMenuSeparator,
-} from "../ui/dropdown-menu";
-import { useEffect, useState } from "react";
-import {
-  useCurrentImage,
-  usePreview,
-  useProjectInfo,
-} from "@/providers/project-provider";
+import { toast } from "@/hooks/use-toast";
 import {
   useAddProjectTool,
   useDeleteProjectTool,
@@ -22,9 +7,24 @@ import {
   useUpdateProjectTool,
 } from "@/lib/mutations/projects";
 import { ProjectTool, ProjectToolResponse } from "@/lib/projects";
-import { toast } from "@/hooks/use-toast";
 import { useGetSocket } from "@/lib/queries/projects";
-import { Tooltip, TooltipTrigger, TooltipContent } from "../ui/tooltip";
+import {
+  useCurrentImage,
+  usePreview,
+  useProjectInfo,
+} from "@/providers/project-provider";
+import { useSession } from "@/providers/session-provider";
+import { LoaderCircle, Sparkle, type LucideIcon } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "../ui/dropdown-menu";
+import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 
 interface ToolbarButtonProps {
   open?: boolean;
@@ -249,6 +249,7 @@ export function ToolbarButton({
 
   const TButton = () => (
     <Tooltip>
+      <TooltipTrigger asChild>
       <Button
         variant={variant}
         className={`size-8 relative ${isPremium && variant === "default" && "bg-indigo-500 hover:bg-indigo-400"}`}
@@ -263,7 +264,6 @@ export function ToolbarButton({
         ) : (
           <>
             {isPremium ? (
-              <TooltipTrigger asChild>
                 <div
                   className={
                     isPremium && variant === "default"
@@ -275,7 +275,6 @@ export function ToolbarButton({
                   <Sparkle className="h-3 w-3 absolute -top-1 -right-1" />
                   <span className="sr-only">{label}</span>
                 </div>
-              </TooltipTrigger>
             ) : (
               <>
                 <Icon className="h-3.5 w-3.5" />
@@ -283,9 +282,10 @@ export function ToolbarButton({
               </>
             )}
           </>
-        )}
+          )}
       </Button>
-      <TooltipContent className="ml-2 bg-indigo-500" side="right">
+          </TooltipTrigger>
+      <TooltipContent className={`ml-2 ${isPremium ? "bg-indigo-500" : "bg-white border border-gray-200 text-black"}`} side="right">
         {label}
       </TooltipContent>
     </Tooltip>

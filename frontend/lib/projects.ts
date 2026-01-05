@@ -1,6 +1,6 @@
-import { api } from "./axios";
 import axios from "axios";
 import JSZip from "jszip";
+import { api } from "./axios";
 import { ToolNames, ToolParams } from "./tool-types";
 
 export interface Project {
@@ -95,7 +95,7 @@ export const addProject = async ({
       headers: {
         Authorization: `Bearer ${token}`,
       },
-    },
+    }
   );
 
   if (response.status !== 201 || !response.data)
@@ -151,7 +151,7 @@ export const updateProject = async ({
       headers: {
         Authorization: `Bearer ${token}`,
       },
-    },
+    }
   );
 
   if (response.status !== 204) throw new Error("Failed to update project");
@@ -160,7 +160,7 @@ export const updateProject = async ({
 export const getProjectImages = async (
   uid: string,
   pid: string,
-  token: string,
+  token: string
 ) => {
   const response = await api.get<ProjectImage[]>(
     `/projects/${uid}/${pid}/imgs`,
@@ -168,7 +168,7 @@ export const getProjectImages = async (
       headers: {
         Authorization: `Bearer ${token}`,
       },
-    },
+    }
   );
 
   if (response.status !== 200 || !response.data)
@@ -185,7 +185,7 @@ export const getProjectImage = async (
   uid: string,
   pid: string,
   imageId: string,
-  token: string,
+  token: string
 ) => {
   const response = await api.get<ProjectImage>(
     `/projects/${uid}/${pid}/img/${imageId}`,
@@ -193,7 +193,7 @@ export const getProjectImage = async (
       headers: {
         Authorization: `Bearer ${token}`,
       },
-    },
+    }
   );
 
   if (response.status !== 200 || !response.data)
@@ -305,7 +305,7 @@ export const deleteProjectImages = async ({
         headers: {
           Authorization: `Bearer ${token}`,
         },
-      },
+      }
     );
 
     if (response.status !== 204)
@@ -331,7 +331,7 @@ export const previewProjectImage = async ({
       headers: {
         Authorization: `Bearer ${token}`,
       },
-    },
+    }
   );
 
   if (response.status !== 201 || !response.data)
@@ -358,7 +358,7 @@ export const addProjectTool = async ({
       headers: {
         Authorization: `Bearer ${token}`,
       },
-    },
+    }
   );
 
   if (response.status !== 201) throw new Error("Failed to add tool");
@@ -386,7 +386,7 @@ export const updateProjectTool = async ({
       headers: {
         Authorization: `Bearer ${token}`,
       },
-    },
+    }
   );
 
   if (response.status !== 204) throw new Error("Failed to update tool");
@@ -446,7 +446,7 @@ export const downloadProjectResults = async ({
         Authorization: `Bearer ${token}`,
       },
       responseType: "arraybuffer",
-    },
+    }
   );
 
   if (response.status !== 200 || !response.data)
@@ -466,7 +466,7 @@ export const downloadProjectResults = async ({
 export const fetchProjectResults = async (
   uid: string,
   pid: string,
-  token: string,
+  token: string
 ) => {
   const response = await api.get<{
     imgs: {
@@ -511,7 +511,7 @@ export const fetchProjectResults = async (
           _id: img.og_img_id,
           name: img.name,
           url: img.url,
-        }) as ProjectImage,
+        }) as ProjectImage
     ),
     texts: texts,
   };
@@ -526,16 +526,54 @@ export const processProject = async ({
   pid: string;
   token: string;
 }) => {
-  const response = await api.post<string>(
-    `/projects/${uid}/${pid}/process`,
-    {},
-    {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    },
-  );
+  try {
+    const response = await api.post<string>(
+      `/projects/${uid}/${pid}/process`,
+      {},
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
 
-  if (response.status !== 201 || !response.data)
-    throw new Error("Failed to request project processing");
+    if (response.status !== 201 || !response.data)
+      throw new Error("Failed to request project processing");
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      throw new Error(error.response?.data);
+    }
+
+    throw error;
+  }
+};
+
+export const cancelProcessProject = async ({
+  uid,
+  pid,
+  token,
+}: {
+  uid: string;
+  pid: string;
+  token: string;
+}) => {
+  try {
+    const response = await api.post(
+      `/projects/${uid}/${pid}/process/cancel`,
+      {},
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    if (response.status !== 204) throw new Error("Failed to cancel processing");
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      throw new Error(error.response?.data);
+    }
+
+    throw error;
+  }
 };

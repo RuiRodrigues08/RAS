@@ -1,16 +1,16 @@
 FROM node:18
 
-WORKDIR /usr/src/app
+WORKDIR /app
 
 COPY package.json ./
 RUN npm install -g bun
 RUN bun i
 COPY . .
 # para produção:
-RUN bun run build
+# RUN bun run build
 
 EXPOSE 3000
 # para produção:
-CMD ["bun", "start"]
+# CMD ["bun", "start"]
 # para dev:
-# CMD ["bun", "dev"]
+CMD ["bun", "dev"]
