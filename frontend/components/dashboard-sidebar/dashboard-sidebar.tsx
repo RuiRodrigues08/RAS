@@ -21,8 +21,8 @@ export default function DashboardSidebar() {
   const path = usePathname();
   const router = useRouter();
   const session = useSession();
-  const isFreePlan = session.user.type === "free";
-  const isAnonymous = session.user.type === "anonymous";
+  const isFreePlan = session?.user?.type === "free";
+  const isAnonymous = session?.user?.type === "anonymous";
 
   if (!path.includes("/dashboard/account"))
     return (
@@ -60,12 +60,12 @@ export default function DashboardSidebar() {
           <ProjectList />
         </SidebarContent>
         <SidebarFooter>
-          {session.user.type !== "anonymous" ? (
+          {session?.user?.type !== "anonymous" ? (
             <NavUser
               user={{
-                name: session.user.name ?? "",
-                email: session.user.email ?? "",
-                isPremium: session.user.type === "premium",
+                name: session?.user?.name ?? "",
+                email: session?.user?.email ?? "",
+                isPremium: session?.user?.type === "premium",
               }}
             />
           ) : (

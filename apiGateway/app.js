@@ -7,6 +7,7 @@ var logger = require("morgan");
 var projectsRouter = require("./routes/projects");
 var usersRouter = require("./routes/users");
 var subscriptionsRouter = require("./routes/subscriptions");
+var sharelinksRouter = require("./routes/sharelinks");
 var app = express();
 
 // Enable CORS for all routes
@@ -25,6 +26,7 @@ app.use(express.static(path.join(__dirname, "public")));
 app.use("/projects", projectsRouter);
 app.use("/users", usersRouter);
 app.use("/subscriptions", subscriptionsRouter);
+app.use("/projects", sharelinksRouter);
 
 // catch 404 and forward to error handler
 app.use(function (req, res, next) {

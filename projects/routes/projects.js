@@ -27,6 +27,7 @@ const Project = require("../controllers/project");
 const Process = require("../controllers/process");
 const Result = require("../controllers/result");
 const Preview = require("../controllers/preview");
+const ShareLink = require("../controllers/sharelink");
 
 const {
   get_image_docker,
@@ -296,7 +297,7 @@ router.get("/:user", (req, res, next) => {
     .catch((_) => res.status(500).jsonp("Error acquiring user's projects"));
 });
 
-// Get a shared project (without user_id validation)
+//Projeto partilhado com user anonimo
 router.get("/shared/:project", (req, res, next) => {
   Project.getById(req.params.project)
     .then(async (project) => {

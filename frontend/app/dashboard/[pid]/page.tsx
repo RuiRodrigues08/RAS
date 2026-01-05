@@ -1,9 +1,10 @@
 "use client";
 
-import { Download, LoaderCircle, OctagonAlert, Play, Share2, Link as LinkIcon, Check, ChevronDown, Copy } from "lucide-react";
+import { Download, LoaderCircle, OctagonAlert, Play } from "lucide-react";
 import { ProjectImageList } from "@/components/project-page/project-image-list";
 import { ViewToggle } from "@/components/project-page/view-toggle";
 import { AddImagesDialog } from "@/components/project-page/add-images-dialog";
+import { ShareProjectDialog } from "@/components/project-page/share-project-dialog";
 import { Button } from "@/components/ui/button";
 import { Toolbar } from "@/components/toolbar/toolbar";
 import {
@@ -32,19 +33,6 @@ import { useQueryClient } from "@tanstack/react-query";
 import { ModeToggle } from "@/components/project-page/mode-toggle";
 import { SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 import { useIsMobile } from "@/hooks/use-mobile";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 
 export default function Project({
   params,
@@ -82,19 +70,6 @@ export default function Project({
   const [processingProgress, setProcessingProgress] = useState<number>(0);
   const [processingSteps, setProcessingSteps] = useState<number>(1);
   const [waitingForPreview, setWaitingForPreview] = useState<string>("");
-  
-  
-  const [sharePermission, setSharePermission] = useState<"view" | "edit">("view");
-  const [generatedLink, setGeneratedLink] = useState("");
-  const [isCopied, setIsCopied] = useState(false); 
-  
-  // TROCAR DEPOIS PARA OS USERS
-  const [sharedUsers, setSharedUsers] = useState([
-    { id: 1, name: "Flavio Costa", permission: "owner" as const },
-    { id: 2, name: "Rosa Silva", permission: "edit" as const },
-    { id: 3, name: "Constança Gonçalves", permission: "view" as const },
-    { id: 4, name: "Rodrigo Gonçalves", permission: "edit" as const },
-  ]);
 
 
   const isReadOnly = searchParams.get("auth") === "view"; 
@@ -106,34 +81,6 @@ export default function Project({
     session?.token ?? ""
   );
   const qc = useQueryClient();
-
- 
-  const handleGenerateLink = () => {
-    const url = `${window.location.origin}${path}?auth=${sharePermission}`;
-    setGeneratedLink(url);
-    navigator.clipboard.writeText(url);
-    
-    // Feedback visual
-    setIsCopied(true);
-    toast({ title: "Link copied to clipboard!" });
-    
-    
-    setTimeout(() => setIsCopied(false), 2000);
-  };
-
-  const handleChangePermission = (userId: number, newPermission: "edit" | "view") => {
-    setSharedUsers(users => 
-      users.map(user => 
-        user.id === userId ? { ...user, permission: newPermission } : user
-      )
-    );
-    toast({ title: "Permissão atualizada" });
-  };
-
-  const handleRemoveAccess = (userId: number) => {
-    setSharedUsers(users => users.filter(user => user.id !== userId));
-    toast({ title: "Acesso removido" });
-  };
 
   useLayoutEffect(() => {
     if (!["edit", "results"].includes(mode) || !["grid", "carousel"].includes(view)) {
@@ -263,58 +210,11 @@ export default function Project({
 
               
               {session && (
-                <Dialog>
-                  <DialogTrigger asChild>
-                    <Button variant="outline" className="px-3" title="Partilhar">
-                      <Share2 className="size-4" />
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="sm:max-w-[500px] bg-[#16151C] text-white border-zinc-800 p-0">
-                    <DialogHeader className="border-b border-zinc-800 px-6 py-4">
-                      <DialogTitle className="text-lg font-semibold">Share project</DialogTitle>
-                  </DialogHeader>
-                  
-                  <div className="px-6 pb-6 pt-3">
-                    {/* Botão Copiar Link */}
-                    <div className="flex flex-col gap-3 pb-8 border-b border-zinc-800">
-                      <p className="text-sm text-zinc-300 leading-relaxed">
-                        Copie o link para compartilhar este projeto
-                      </p>
-                      
-                      <Button 
-                        onClick={handleGenerateLink}
-                        className="gap-2 h-11 px-6 bg-zinc-700 hover:bg-zinc-600 text-white border-0 w-fit"
-                      >
-                        <Copy className="h-4 w-4" />
-                        Copiar link
-                      </Button>
-                    </div>
-
-                    {/* Lista de Pessoas com Acesso */}
-                    <div className="pt-8">
-                      <h3 className="text-base font-semibold mb-4">Pessoas com acesso</h3>
-                      <div className="space-y-0 max-h-[300px] overflow-y-auto pr-2">
-                        {sharedUsers.map((user) => (
-                          <div
-                            key={user.id}
-                            className="flex items-center justify-between py-3 hover:bg-zinc-900/30 rounded-lg px-2 -mx-2 transition-colors"
-                          >
-                            <span className="text-base font-medium">{user.name}</span>
-                            
-                            <span className="text-base text-zinc-400 font-medium">
-                              {user.permission === "owner" 
-                                ? "Owner" 
-                                : user.permission === "edit" 
-                                ? "Editar" 
-                                : "Visualizar"}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </DialogContent>
-              </Dialog>
+                <ShareProjectDialog 
+                  projectId={pid}
+                  userId={session.user._id}
+                  currentPath={path}
+                />
               )}
 
               <div className="hidden xl:flex items-center gap-2">

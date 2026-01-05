@@ -4,6 +4,7 @@ import {
   addProjectImages,
   addProjectTool,
   clearProjectTools,
+  createShareLink,
   deleteProject,
   deleteProjectImages,
   deleteProjectTool,
@@ -230,5 +231,11 @@ export const useClearProjectTools = (
         queryKey: ["projectResults", uid, pid, token],
       });
     },
+  });
+};
+
+export const useCreateShareLink = () => {
+  return useMutation({
+    mutationFn: createShareLink,
   });
 };

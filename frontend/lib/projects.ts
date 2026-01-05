@@ -41,6 +41,13 @@ export interface ProjectToolResponse extends Omit<ProjectTool, "_id"> {
   _id: string;
 }
 
+export interface ShareLinkResponse {
+  token: string;
+  permission: "VIEWER" | "EDITOR";
+  createdAt: string;
+  url: string;
+}
+
 export const fetchProjects = async (uid: string, token: string) => {
   const response = await api.get<Project[]>(`/projects/${uid}`, {
     headers: {
@@ -558,6 +565,33 @@ export const fetchProjectResults = async (
     ),
     texts: texts,
   };
+};
+
+export const createShareLink = async ({
+  uid,
+  pid,
+  permission,
+  token,
+}: {
+  uid: string;
+  pid: string;
+  permission: "VIEWER" | "EDITOR";
+  token: string;
+}) => {
+  const response = await api.post<ShareLinkResponse>(
+    `/projects/${uid}/${pid}/share`,
+    { permission },
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+
+  if (response.status !== 201 || !response.data)
+    throw new Error("Failed to create share link");
+
+  return response.data;
 };
 
 export const processProject = async ({

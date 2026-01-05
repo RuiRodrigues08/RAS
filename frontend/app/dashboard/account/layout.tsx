@@ -22,12 +22,12 @@ export default function RootLayout({
   const session = useSession();
 
   useLayoutEffect(() => {
-    if (session.user.type === "anonymous") {
+    if (session?.user?.type === "anonymous") {
       redirect("/login", RedirectType.replace);
     }
   }, [session.user.type]);
 
-  if (session.user.type !== "anonymous")
+  if (session?.user?.type !== "anonymous")
     return (
       <div className="flex">
         <AccountSidebar />

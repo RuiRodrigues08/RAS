@@ -28,10 +28,11 @@ export function AddImagesDialog() {
   const { _id: pid } = useProjectInfo();
   const session = useSession();
   
+  // Can be used with auth=edit, but requires session to actually add images
   const addImages = useAddProjectImages(
-    session.user._id,
+    session?.user?._id ?? "",
     pid as string,
-    session.token,
+    session?.token ?? "",
   );
 
   function onDrop(files: File[]) {
@@ -43,6 +44,15 @@ export function AddImagesDialog() {
   }
 
   function handleAdd() {
+    if (!session) {
+      toast({
+        title: "Autenticação necessária",
+        description: "Faça login para adicionar imagens.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     addImages.mutate(
       {
         uid: session.user._id,
