@@ -27,7 +27,12 @@ class Background_Remove_AI:
     def background_remove(self, image_path, store_image_path):
         image = self._img_handler.get_img(image_path)
         new_image = remove(image)
+        
+        if new_image.mode == 'RGBA' and not store_image_path.lower().endswith('.png'):
+            store_image_path = store_image_path.rsplit('.', 1)[0] + '.png'
+        
         self._img_handler.store_img(new_image, store_image_path)
+        return store_image_path
 
     def background_remove_callback(self, ch, method, properties, body):
         json_str = body.decode()
@@ -51,19 +56,19 @@ class Background_Remove_AI:
             return
 
         try:
-            self.background_remove(img_path, store_img_path)
+            final_path = self.background_remove(img_path, store_img_path)
 
             cur_timestamp = datetime.datetime.now(pytz.utc)
             processing_time = (cur_timestamp - timestamp).total_seconds() * 1000
             cur_timestamp = cur_timestamp.isoformat()
 
-            self._tool_msg.send_msg(msg_id, resp_msg_id, cur_timestamp, 'success', processing_time, store_img_path)
-        except Exception:
+            self._tool_msg.send_msg(msg_id, resp_msg_id, cur_timestamp, 'success', processing_time, final_path)
+        except Exception as e:
             cur_timestamp = datetime.datetime.now(pytz.utc)
             processing_time = (cur_timestamp - timestamp).total_seconds() * 1000
             cur_timestamp = cur_timestamp.isoformat()
 
-            self._tool_msg.send_msg(msg_id, resp_msg_id, cur_timestamp, 'error', processing_time, None, self._codes['error_processing'], "An error occured while processing the request", img_path)
+            self._tool_msg.send_msg(msg_id, resp_msg_id, cur_timestamp, 'error', processing_time, None, self._codes['error_processing'], "An error occured while processing the request", str(e), img_path)
 
     def exec(self, args):
         while True:

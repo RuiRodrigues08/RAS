@@ -9,7 +9,6 @@ from PIL import Image
 from utils.img_handler import Img_Handler
 from utils.tool_msg import ToolMSG
 import utils.env as env
-import utils.env as env
 
 class Cut:
     def __init__(self):
@@ -31,11 +30,34 @@ class Cut:
         img = self._img_handler.get_img(img_path)
         
         # Validate dimensions
-        # left, top, right, bottom = map(float, dimensions) 
-        # dimensions = (round(left), round(top), round(right), round(bottom))
+        left, top, right, bottom = dimensions
+        img_width, img_height = img.size
+
+        # Ensure coordinates are within image bounds        
+        crop_left = left
+        crop_top = top
+        crop_right = img_width - right
+        crop_bottom = img_height - bottom
         
+        # Make sure the crop dimensions are valid
+        crop_width = crop_right - crop_left
+        crop_height = crop_bottom - crop_top
+        
+        if crop_width <= 0 or crop_height <= 0:
+            raise ValueError(
+                f"Invalid crop area! Image: {img_width}x{img_height}, "
+                f"Margins: left={left}, top={top}, right={right}, bottom={bottom}. "
+                f"Result would be: {crop_width}x{crop_height}"
+            )
+        
+        # Adjust coordinates to be within image bounds
+        crop_left = max(0, crop_left)
+        crop_top = max(0, crop_top)
+        crop_right = min(img_width, crop_right)
+        crop_bottom = min(img_height, crop_bottom)
+
         # cut image
-        new_img = img.crop(dimensions)
+        new_img = img.crop((crop_left, crop_top, crop_right, crop_bottom))
         
         # store image
         self._img_handler.store_img(new_img, store_img_path)
@@ -49,11 +71,24 @@ class Cut:
         procedure = info['procedure']
         img_path = info['parameters']['inputImageURI']
         store_img_path = info['parameters']['outputImageURI']
-        
-        left = info['parameters']['left']
-        top = info['parameters']['top']
-        right = info['parameters']['right']
-        bottom = info['parameters']['bottom']
+
+        try:
+            left = int(info['parameters']['left'])
+            top = int(info['parameters']['top'])
+            right = int(info['parameters']['right'])
+            bottom = int(info['parameters']['bottom'])
+        except (ValueError, KeyError) as e:
+            cur_timestamp = datetime.datetime.now(pytz.utc)
+            processing_time = (cur_timestamp - timestamp).total_seconds() * 1000
+            cur_timestamp = cur_timestamp.isoformat()
+            
+            self._tool_msg.send_msg(msg_id, resp_msg_id, 
+                                    cur_timestamp, 'error', 
+                                    processing_time, None, 
+                                    self._codes['error_processing'], 
+                                    "Invalid crop parameters", 
+                                    str(e), img_path)
+            return
         
         resp_msg_id = f'cut-{self._counter}-{msg_id}'
         self._counter += 1
@@ -63,12 +98,9 @@ class Cut:
             processing_time = (cur_timestamp - timestamp).total_seconds() * 1000
             cur_timestamp = cur_timestamp.isoformat()
 
-            self._tool_msg.send_msg(msg_id, 
-                                    resp_msg_id, 
-                                    cur_timestamp,
-                                    'error', 
-                                    processing_time, 
-                                    None, 
+            self._tool_msg.send_msg(msg_id, resp_msg_id, 
+                                    cur_timestamp, 'error', 
+                                    processing_time, None, 
                                     self._codes['wrong_procedure'], 
                                     "The procedure received does not fit into this tool", 
                                     img_path)
