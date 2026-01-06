@@ -97,6 +97,8 @@ export default function CropTool({ disabled }: { disabled: boolean }) {
       disabled={disabled}
       icon={Crop}
       label="Crop"
+      helpDescription="This tool allows you to crop your image by specifying the number of pixels to cut from each side."
+      helpMediaSrc="/gifs/Gif-Crop.gif"
     >
       <div className="space-y-1">
         <div className="flex w-full justify-between items-center text-sm text-gray-500">

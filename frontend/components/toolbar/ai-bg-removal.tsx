@@ -13,6 +13,8 @@ export default function BgRemovalAITool({ disabled }: { disabled: boolean }) {
       label="AI Background Removal"
       isPremium
       noParams
+      helpDescription="This tool uses an AI model to remove the background of your image."
+      helpMediaSrc="/gifs/Gif-removerfundo.gif"
     />
   );
 }

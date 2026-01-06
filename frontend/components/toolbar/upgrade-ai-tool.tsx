@@ -13,6 +13,8 @@ export default function UpgradeAITool({ disabled }: { disabled: boolean }) {
       label="AI Upgrade"
       isPremium
       noParams
+      helpDescription="This tool uses an AI model to enhance the quality of your image."
+      helpMediaSrc="/gifs/Gif-upgrade.gif"
     />
   );
 }

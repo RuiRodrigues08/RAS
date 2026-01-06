@@ -11,7 +11,10 @@ export default function WatermarkTool({ disabled }: { disabled: boolean }) {
       disabled={disabled}
       icon={Signature}
       label="Watermark"
+      helpDescription="This tool allows you to add a watermark to your image."
+      helpMediaSrc="/gifs/Gif-Marca-de-agua.gif"
       noParams
+      helpFirst
     />
   );
 }

@@ -72,6 +72,8 @@ export default function ResizeTool({ disabled }: { disabled: boolean }) {
       disabled={disabled}
       icon={Scaling}
       label="Resize"
+      helpDescription="This tool allows you to change the dimensions of your image."
+      helpMediaSrc="/gifs/Gif-Resize.gif"
     >
       <div className="space-y-1">
         <div className="flex w-full justify-between items-center text-sm text-gray-500">

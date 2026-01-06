@@ -33,6 +33,8 @@ export default function RotateTool({ disabled }: { disabled: boolean }) {
       disabled={disabled}
       icon={RotateCcw}
       label="Rotate"
+      helpDescription="This tool rotates the image by a specified number of degrees."
+      helpMediaSrc="/gifs/Gif-Rotate.gif"
     >
       <Slider
         defaultValue={[0]}

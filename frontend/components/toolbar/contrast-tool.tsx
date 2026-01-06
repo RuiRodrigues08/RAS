@@ -33,6 +33,8 @@ export default function ContrastTool({ disabled }: { disabled: boolean }) {
       disabled={disabled}
       icon={Contrast}
       label="Contrast"
+      helpDescription="This tool controls the difference between the dark and light colors."
+      helpMediaSrc="/gifs/Gif-Contraste.gif"
     >
       <Slider
         defaultValue={[1]}
