@@ -1,36 +1,36 @@
 "use client";
 
-import { Download, LoaderCircle, OctagonAlert, Play } from "lucide-react";
+import Loading from "@/components/loading";
+import { AddImagesDialog } from "@/components/project-page/add-images-dialog";
+import { ModeToggle } from "@/components/project-page/mode-toggle";
 import { ProjectImageList } from "@/components/project-page/project-image-list";
 import { ViewToggle } from "@/components/project-page/view-toggle";
-import { AddImagesDialog } from "@/components/project-page/add-images-dialog";
-import { Button } from "@/components/ui/button";
 import { Toolbar } from "@/components/toolbar/toolbar";
-import {
-  useGetProject,
-  useGetProjectResults,
-  useGetSocket,
-} from "@/lib/queries/projects";
-import Loading from "@/components/loading";
-import { ProjectProvider } from "@/providers/project-provider";
-import { use, useEffect, useLayoutEffect, useState } from "react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { useSession } from "@/providers/session-provider";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
+import { SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { useToast } from "@/hooks/use-toast";
 import {
   useDownloadProject,
   useDownloadProjectResults,
   useProcessProject,
 } from "@/lib/mutations/projects";
-import { useToast } from "@/hooks/use-toast";
 import { ProjectImage } from "@/lib/projects";
-import { Progress } from "@/components/ui/progress";
-import { Card } from "@/components/ui/card";
+import {
+  useGetProject,
+  useGetProjectResults,
+  useGetSocket,
+} from "@/lib/queries/projects";
+import { ProjectProvider } from "@/providers/project-provider";
+import { useSession } from "@/providers/session-provider";
 import { Transition } from "@headlessui/react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
-import { ModeToggle } from "@/components/project-page/mode-toggle";
-import { SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
-import { useIsMobile } from "@/hooks/use-mobile";
+import { Download, LoaderCircle, OctagonAlert, Play, X } from "lucide-react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { use, useEffect, useLayoutEffect, useState } from "react";
 
 export default function Project({
   params,
@@ -58,13 +58,14 @@ export default function Project({
   const [processingProgress, setProcessingProgress] = useState<number>(0);
   const [processingSteps, setProcessingSteps] = useState<number>(1);
   const [waitingForPreview, setWaitingForPreview] = useState<string>("");
+  const [showCancel, setShowCancel] = useState<boolean>(false);
 
   const totalProcessingSteps =
     (project.data?.tools.length ?? 0) * (project.data?.imgs.length ?? 0);
   const projectResults = useGetProjectResults(
     session.user._id,
     pid,
-    session.token,
+    session.token
   );
   const qc = useQueryClient();
 
@@ -83,7 +84,7 @@ export default function Project({
 
       const progress = Math.min(
         Math.round((processingSteps * 100) / totalProcessingSteps),
-        100,
+        100
       );
 
       setProcessingProgress(progress);
@@ -125,6 +126,20 @@ export default function Project({
     isMobile,
     projectResults,
   ]);
+
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+
+    if (processing) {
+      timer = setTimeout(() => {
+        setShowCancel(true);
+      }, 10000);
+    } else {
+      setShowCancel(false);
+    }
+
+    return () => clearTimeout(timer);
+  }, [processing]);
 
   if (project.isError)
     return (
@@ -181,7 +196,7 @@ export default function Project({
                     }
                     className="inline-flex"
                     onClick={() => {
-                      processProject.mutate(
+                      processProject.start.mutate(
                         {
                           uid: session.user._id,
                           pid: project.data._id,
@@ -192,13 +207,14 @@ export default function Project({
                             setProcessing(true);
                             sidebar.setOpen(false);
                           },
-                          onError: (error) =>
+                          onError: (error) => {
                             toast({
                               title: "Ups! An error occurred.",
                               description: error.message,
                               variant: "destructive",
-                            }),
-                        },
+                            });
+                          },
+                        }
                       );
                     }}
                   >
@@ -228,7 +244,7 @@ export default function Project({
                           title: `Project ${project.data.name} downloaded.`,
                         });
                       },
-                    },
+                    }
                   );
                 }}
               >
@@ -273,6 +289,37 @@ export default function Project({
               <LoaderCircle className="size-[1em] animate-spin" />
             </div>
             <Progress value={processingProgress} className="w-96" />
+            {showCancel && (
+              <Button
+                variant={"default"}
+                className="bg-red-600 hover:bg-red-500 mt-2"
+                onClick={() => {
+                  processProject.cancel.mutate(
+                    {
+                      uid: session.user._id,
+                      pid: project.data._id,
+                      token: session.token,
+                    },
+                    {
+                      onSuccess: () => {
+                        setProcessing(false);
+                        if (!isMobile) sidebar.setOpen(true);
+                      },
+                      onError: (error) => {
+                        toast({
+                          title: "Ups! An error occurred.",
+                          description: error.message,
+                          variant: "destructive",
+                        });
+                      },
+                    }
+                  );
+                }}
+              >
+                <X strokeWidth={2.5} />
+                Cancel
+              </Button>
+            )}
           </Card>
         </div>
       </Transition>
