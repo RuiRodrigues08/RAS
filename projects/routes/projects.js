@@ -77,14 +77,18 @@ function advanced_tool_num(project) {
 // TODO process message according to type of output
 function process_msg() {
   read_msg(async (msg) => {
+    let user_msg_id;
+    let timestamp;
+    let process;
+
     try {
       const msg_content = JSON.parse(msg.content.toString());
       const msg_id = msg_content.correlationId;
-      const timestamp = new Date().toISOString();
+      timestamp = new Date().toISOString();
 
-      const user_msg_id = `update-client-process-${uuidv4()}`;
+      user_msg_id = `update-client-process-${uuidv4()}`;
 
-      const process = await Process.getOne(msg_id);
+      process = await Process.getOne(msg_id);
 
       const prev_process_input_img = process.og_img_uri;
       const prev_process_output_img = process.new_img_uri;
@@ -265,15 +269,19 @@ function process_msg() {
         tool_name,
         params
       );
-    } catch (_) {
-      send_msg_client_error(
-        user_msg_id,
-        timestamp,
-        process.user_id,
-        "30000",
-        "An error happened while processing the project"
-      );
-      return;
+    } catch (error) {
+      console.error("Error processing message:", error);
+
+      if (user_msg_id && timestamp && process) {
+        send_msg_client_error(
+          user_msg_id,
+          timestamp,
+          process.user_id,
+          "30000",
+          "An error happened while processing the project: " + error.message
+        );
+        return;
+      }
     }
   });
 }
