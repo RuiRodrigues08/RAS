@@ -25,6 +25,14 @@ import {
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "../ui/dialog";
 
 interface ToolbarButtonProps {
   open?: boolean;
@@ -38,6 +46,8 @@ interface ToolbarButtonProps {
   children?: React.ReactNode;
   noParams?: boolean;
   onDefault?: () => void;
+  helpDescription?: string;
+  helpMediaSrc?: string;
 }
 
 export function ToolbarButton({
@@ -52,6 +62,8 @@ export function ToolbarButton({
   children,
   noParams = false,
   onDefault = () => {},
+  helpDescription,
+  helpMediaSrc,
 }: ToolbarButtonProps) {
   const router = useRouter();
   const session = useSession();
@@ -86,6 +98,7 @@ export function ToolbarButton({
   );
   const [waiting, setWaiting] = useState<boolean>(false);
   const [timedout, setTimedout] = useState<boolean>(false);
+  const [helpOpen, setHelpOpen] = useState<boolean>(false);
 
   function handleDeleteTool() {
     if (prevTool) {
@@ -285,8 +298,11 @@ export function ToolbarButton({
           )}
       </Button>
           </TooltipTrigger>
-      <TooltipContent className={`ml-2 ${isPremium ? "bg-indigo-500" : "bg-white border border-gray-200 text-black"}`} side="right">
-        {label}
+      <TooltipContent
+        className={`ml-2 ${isPremium ? "bg-indigo-500" : "bg-white border border-gray-200 text-black"}`}
+        side="right"
+      >
+        <span>{label}</span>
       </TooltipContent>
     </Tooltip>
   );
@@ -316,8 +332,52 @@ export function ToolbarButton({
         align="end"
         sideOffset={4}
       >
-        <DropdownMenuLabel className="text-sm p-1">{label}</DropdownMenuLabel>
-        <DropdownMenuSeparator />
+        <div className="flex items-center justify-between px-1 pb-0 pt-1">
+          <DropdownMenuLabel className="p-0 text-sm">{label}</DropdownMenuLabel>
+          <Dialog open={helpOpen} onOpenChange={setHelpOpen}>
+            <DialogTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6 rounded-md border border-gray-200 bg-gray-100 text-gray-700 shadow-sm hover:bg-gray-200"
+                aria-label={`${label} help`}
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                }}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setHelpOpen(true);
+                }}
+              >
+                <span className="text-sm font-semibold leading-none">i</span>
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-md">
+              <DialogHeader className="space-y-2">
+                <DialogTitle>{`How does ${label} works`}</DialogTitle>
+                <DialogDescription>
+                  {helpDescription ?? "Help content coming soon."}
+                </DialogDescription>
+              </DialogHeader>
+              {helpMediaSrc ? (
+                <div className="overflow-hidden rounded-md border bg-muted/30">
+                  <img
+                    key={helpMediaSrc}
+                    src={helpMediaSrc}
+                    alt={`${label} help`}
+                    className="h-auto w-full object-contain"
+                    style={{
+                      imageRendering: "auto",
+                    }}
+                  />
+                </div>
+              ) : null}
+            </DialogContent>
+          </Dialog>
+        </div>
+        <DropdownMenuSeparator className="mt-1" />
         <div className="p-1">{children}</div>
         <DropdownMenuSeparator />
         <div className="flex w-full gap-1 items-center">
