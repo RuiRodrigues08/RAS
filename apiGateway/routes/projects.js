@@ -316,9 +316,29 @@ router.post(
         { httpsAgent: httpsAgent }
       )
       .then((resp) => res.status(201).jsonp(resp.data))
-      .catch((err) =>
-        res.status(500).jsonp("Error requesting project processing")
-      );
+      .catch((err) => res.status(err?.status).jsonp(err?.response?.data));
+  }
+);
+
+/**
+ * Generate request to cancel the processing of a project
+ * @body Empty
+ * @returns String indicating process request has been canceled
+ */
+router.post(
+  "/:user/:project/process/cancel",
+  auth.checkToken,
+  function (req, res, next) {
+    axios
+      .post(
+        projectsURL + `${req.params.user}/${req.params.project}/process/cancel`,
+        req.body,
+        {
+          httpsAgent: httpsAgent,
+        }
+      )
+      .then((resp) => res.status(204).jsonp(resp.data))
+      .catch((err) => res.status(err?.status).jsonp(err?.response?.data));
   }
 );
 

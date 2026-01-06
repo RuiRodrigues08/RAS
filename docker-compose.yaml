@@ -107,9 +107,19 @@ services:
       - elk
     command: mongod --port 27018
     ports:
-        - '27018:27018'
+      - "27018:27018"
     healthcheck:
-      test: ["CMD", "mongo", "--host", "localhost", "--port", "27018", "--eval", "db.adminCommand('ping')"]
+      test:
+        [
+          "CMD",
+          "mongo",
+          "--host",
+          "localhost",
+          "--port",
+          "27018",
+          "--eval",
+          "db.adminCommand('ping')",
+        ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -137,6 +147,8 @@ services:
       - elk
     volumes:
       - image_data:/app/images
+      - ./projects:/app
+      - /app/node_modules
 
   users_mongoDB:
     image: mongo:4.4
@@ -144,9 +156,19 @@ services:
     restart: on-failure
     command: mongod --port 27019
     ports:
-        - '27019:27019'
+      - "27019:27019"
     healthcheck:
-      test: ["CMD", "mongo", "--host", "localhost", "--port", "27019", "--eval", "db.adminCommand('ping')"]
+      test:
+        [
+          "CMD",
+          "mongo",
+          "--host",
+          "localhost",
+          "--port",
+          "27019",
+          "--eval",
+          "db.adminCommand('ping')",
+        ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -179,7 +201,15 @@ services:
     networks:
       - elk
     healthcheck:
-      test: ["CMD", "mongo", "--host", "localhost", "--eval", "db.adminCommand('ping')"]
+      test:
+        [
+          "CMD",
+          "mongo",
+          "--host",
+          "localhost",
+          "--eval",
+          "db.adminCommand('ping')",
+        ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -319,7 +349,7 @@ services:
       - image_data:/app/images
 
   people_ai_tool:
-    build: 
+    build:
       context: ./Tools
       dockerfile: people_ai/Dockerfile
     container_name: picturas-people-ai-tool-ms
@@ -333,7 +363,7 @@ services:
       - image_data:/app/images
 
   obj_ai_tool:
-    build: 
+    build:
       context: ./Tools
       dockerfile: obj_ai/Dockerfile
     container_name: picturas-obj-ai-tool-ms
@@ -425,7 +455,7 @@ services:
       - RABBITMQ_USER=user
       - RABBITMQ_PASS=password
       - RABBITMQ_HOST=rabbitmq
-      - PICTURAS_LOG_LEVEL=INFO  # change / remove in production
+      - PICTURAS_LOG_LEVEL=INFO # change / remove in production
       - RABBITMQ_RESULTS_EXCHANGE=picturas
       - RABBITMQ_RESULTS_ROUTING_KEY=project_queue
     networks:

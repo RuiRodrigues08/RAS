@@ -29,7 +29,7 @@ module.exports.create = async (process) => {
 module.exports.update = (user_id, project_id, process_id, process) => {
   return Process.updateOne(
     { user_id: user_id, project_id: project_id, _id: process_id },
-    process,
+    process
   );
 };
 
@@ -38,5 +38,12 @@ module.exports.delete = (user_id, project_id, process_id) => {
     user_id: user_id,
     project_id: project_id,
     _id: process_id,
+  });
+};
+
+module.exports.deleteAll = (user_id, project_id) => {
+  return Process.deleteMany({
+    user_id: user_id,
+    project_id: project_id,
   });
 };

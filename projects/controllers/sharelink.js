@@ -41,14 +41,16 @@ module.exports.generateLink = async (projectId, permission) => {
  * @param {string} token - The share link token
  * @returns {Promise<Object|null>} - The share link data with project info, or null if invalid
  */
-module.exports.validateLink = async (token) => {
+module.exports.validateLink = async (token, projectReal) => {
   const shareLink = await ShareLink.findOne({ token: token }).exec();
   
   if (!shareLink) {
     return null;
   }
 
-
+  if(shareLink.projectId.toString() !== projectReal){
+    return null;
+  } 
   const project = await Project.findOne({ _id: shareLink.projectId }).exec();
   
   if (!project) {

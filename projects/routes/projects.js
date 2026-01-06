@@ -12,7 +12,7 @@ const mime = require("mime-types");
 
 const JSZip = require("jszip");
 
-const { v4: uuidv4 } = require('uuid');
+const { v4: uuidv4 } = require("uuid");
 
 const {
   send_msg_tool,
@@ -87,22 +87,33 @@ function process_msg() {
 
       const process = await Process.getOne(msg_id);
 
+      if (!process) {
+        console.log(
+          `Process ${msg_id} not found. It was likely cancelled by the user.`
+        );
+        return;
+      }
+
       const prev_process_input_img = process.og_img_uri;
       const prev_process_output_img = process.new_img_uri;
-      
+
       // Get current process, delete it and create it's sucessor if possible
       const og_img_uri = process.og_img_uri;
       const img_id = process.img_id;
-      
+
       await Process.delete(process.user_id, process.project_id, process._id);
-      
+
       if (msg_content.status === "error") {
         console.log(JSON.stringify(msg_content));
         if (/preview/.test(msg_id)) {
-          send_msg_client_preview_error(`update-client-preview-${uuidv4()}`, timestamp, process.user_id, msg_content.error.code, msg_content.error.msg)
-        }
-        
-        else {
+          send_msg_client_preview_error(
+            `update-client-preview-${uuidv4()}`,
+            timestamp,
+            process.user_id,
+            msg_content.error.code,
+            msg_content.error.msg
+          );
+        } else {
           send_msg_client_error(
             user_msg_id,
             timestamp,
@@ -113,14 +124,17 @@ function process_msg() {
         }
         return;
       }
-      
+
       const output_file_uri = msg_content.output.imageURI;
       const type = msg_content.output.type;
       const project = await Project.getOne(process.user_id, process.project_id);
 
       const next_pos = process.cur_pos + 1;
 
-      if (/preview/.test(msg_id) && (type == "text" || next_pos >= project.tools.length)) {
+      if (
+        /preview/.test(msg_id) &&
+        (type == "text" || next_pos >= project.tools.length)
+      ) {
         const file_path = path.join(__dirname, `/../${output_file_uri}`);
         const file_name = path.basename(file_path);
         const fileStream = fs.createReadStream(file_path); // Use createReadStream for efficiency
@@ -143,7 +157,6 @@ function process_msg() {
         const og_key_tmp = resp.data.data.imageKey.split("/");
         const og_key = og_key_tmp[og_key_tmp.length - 1];
 
-        
         const preview = {
           type: type,
           file_name: file_name,
@@ -152,18 +165,21 @@ function process_msg() {
           project_id: process.project_id,
           user_id: process.user_id,
         };
-        
+
         await Preview.create(preview);
 
-        if(next_pos >= project.tools.length){
-          const previews = await Preview.getAll(process.user_id, process.project_id);
+        if (next_pos >= project.tools.length) {
+          const previews = await Preview.getAll(
+            process.user_id,
+            process.project_id
+          );
 
           let urls = {
-            'imageUrl': '',
-            'textResults': []
+            imageUrl: "",
+            textResults: [],
           };
 
-          for(let p of previews){
+          for (let p of previews) {
             const url_resp = await get_image_host(
               process.user_id,
               process.project_id,
@@ -173,31 +189,28 @@ function process_msg() {
 
             const url = url_resp.data.url;
 
-            if(p.type != "text") urls.imageUrl = url;
-
+            if (p.type != "text") urls.imageUrl = url;
             else urls.textResults.push(url);
           }
-          
+
           send_msg_client_preview(
             `update-client-preview-${uuidv4()}`,
             timestamp,
             process.user_id,
             JSON.stringify(urls)
           );
-
         }
       }
 
-      if(/preview/.test(msg_id) && next_pos >= project.tools.length) return;
+      if (/preview/.test(msg_id) && next_pos >= project.tools.length) return;
 
       if (!/preview/.test(msg_id))
-        send_msg_client(
-          user_msg_id,
-          timestamp,
-          process.user_id
-        );
+        send_msg_client(user_msg_id, timestamp, process.user_id);
 
-      if (!/preview/.test(msg_id) && (type == "text" || next_pos >= project.tools.length)) {
+      if (
+        !/preview/.test(msg_id) &&
+        (type == "text" || next_pos >= project.tools.length)
+      ) {
         const file_path = path.join(__dirname, `/../${output_file_uri}`);
         const file_name = path.basename(file_path);
         const fileStream = fs.createReadStream(file_path); // Use createReadStream for efficiency
@@ -243,8 +256,10 @@ function process_msg() {
       const tool_name = tool.procedure;
       const params = tool.params;
 
-      const read_img = type == "text" ? prev_process_input_img : output_file_uri;
-      const output_img = type == "text" ? prev_process_output_img : output_file_uri;
+      const read_img =
+        type == "text" ? prev_process_input_img : output_file_uri;
+      const output_img =
+        type == "text" ? prev_process_output_img : output_file_uri;
 
       const new_process = {
         user_id: project.user_id,
@@ -266,7 +281,7 @@ function process_msg() {
         tool_name,
         params
       );
-    } catch (_) {
+    } catch {
       send_msg_client_error(
         user_msg_id,
         timestamp,
@@ -297,48 +312,7 @@ router.get("/:user", (req, res, next) => {
     .catch((_) => res.status(500).jsonp("Error acquiring user's projects"));
 });
 
-//Projeto partilhado com user anonimo
-router.get("/shared/:project", (req, res, next) => {
-  Project.getById(req.params.project)
-    .then(async (project) => {
-      if (!project) {
-        res.status(404).jsonp("Project not found");
-        return;
-      }
 
-      const response = {
-        _id: project._id,
-        user_id: project.user_id,
-        name: project.name,
-        tools: project.tools,
-        imgs: [],
-      };
-
-      for (let img of project.imgs) {
-        try {
-          const resp = await get_image_host(
-            project.user_id,
-            req.params.project,
-            "src",
-            img.og_img_key
-          );
-          const url = resp.data.url;
-
-          response["imgs"].push({
-            _id: img._id,
-            name: path.basename(img.og_uri),
-            url: url,
-          });
-        } catch (_) {
-          res.status(404).jsonp(`Error acquiring image's url`);
-          return;
-        }
-      }
-
-      res.status(200).jsonp(response);
-    })
-    .catch((_) => res.status(501).jsonp(`Error acquiring shared project`));
-});
 
 // Get a specific user's project
 router.get("/:user/:project", (req, res, next) => {
@@ -494,7 +468,6 @@ router.get("/:user/:project/process", (req, res, next) => {
     );
 });
 
-
 // Get results of processing a project
 router.get("/:user/:project/process/url", (req, res, next) => {
   // Getting last processed request from project in order to get their result's path
@@ -502,8 +475,8 @@ router.get("/:user/:project/process/url", (req, res, next) => {
   Project.getOne(req.params.user, req.params.project)
     .then(async (_) => {
       const ans = {
-        'imgs': [],
-        'texts': []
+        imgs: [],
+        texts: [],
       };
       const results = await Result.getAll(req.params.user, req.params.project);
 
@@ -516,9 +489,10 @@ router.get("/:user/:project/process/url", (req, res, next) => {
         );
         const url = resp.data.url;
 
-        if(r.type == 'text') ans.texts.push({ og_img_id : r.img_id, name: r.file_name, url: url })
-
-        else ans.imgs.push({ og_img_id : r.img_id, name: r.file_name, url: url })
+        if (r.type == "text")
+          ans.texts.push({ og_img_id: r.img_id, name: r.file_name, url: url });
+        else
+          ans.imgs.push({ og_img_id: r.img_id, name: r.file_name, url: url });
       }
 
       res.status(200).jsonp(ans);
@@ -527,7 +501,6 @@ router.get("/:user/:project/process/url", (req, res, next) => {
       res.status(601).jsonp(`Error acquiring project's processing result`)
     );
 });
-
 
 // Get number of advanced tools used in a project
 router.get("/:user/:project/advanced_tools", (req, res, next) => {
@@ -565,8 +538,6 @@ router.post("/:user", (req, res, next) => {
 // Preview an image
 router.post("/:user/:project/preview/:img", (req, res, next) => {
   // Get project and create a new process entry
-  console.log("entrou")
-  console.log(req.params.user, req.params.project, req.params.img)
   Project.getOne(req.params.user, req.params.project)
     .then(async (project) => {
       const prev_preview = await Preview.getAll(
@@ -574,18 +545,14 @@ router.post("/:user/:project/preview/:img", (req, res, next) => {
         req.params.project
       );
 
-      for(let p of prev_preview){
+      for (let p of prev_preview) {
         await delete_image(
           req.params.user,
           req.params.project,
           "preview",
           p.img_key
         );
-        await Preview.delete(
-          req.params.user,
-          req.params.project,
-          p.img_id
-        );
+        await Preview.delete(req.params.user, req.params.project, p.img_id);
       }
 
       // Remove previous preview
@@ -839,7 +806,7 @@ router.post("/:user/:project/process", (req, res, next) => {
           const can_process = resp.data;
 
           if (!can_process) {
-            res.status(404).jsonp("No more daily_operations available");
+            res.status(404).jsonp("No more premium daily operations available");
             return;
           }
 
@@ -936,6 +903,18 @@ router.post("/:user/:project/process", (req, res, next) => {
         .catch((_) => res.status(400).jsonp(`Error checking if can process`));
     })
     .catch((_) => res.status(501).jsonp(`Error acquiring user's project`));
+});
+
+// Cancel project processing
+router.post("/:user/:project/process/cancel", async (req, res, next) => {
+  try {
+    await Process.deleteAll(req.params.user, req.params.project);
+
+    res.sendStatus(204);
+  } catch (error) {
+    console.error("Error cancelling process:", error);
+    res.status(500).jsonp("Error cancelling processing");
+  }
 });
 
 // Update a specific project

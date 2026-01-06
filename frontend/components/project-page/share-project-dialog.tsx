@@ -47,7 +47,7 @@ export function ShareProjectDialog({ projectId, userId, currentPath }: ShareProj
         token: session.token,
       });
 
-      const shareUrl = `${window.location.origin}/projects/share/${result.token}`;
+      const shareUrl = `${window.location.origin}${result.url}`;
       await navigator.clipboard.writeText(shareUrl);
       toast({ title: "Link copied to clipboard!" });
     } catch (error) {
@@ -62,9 +62,9 @@ export function ShareProjectDialog({ projectId, userId, currentPath }: ShareProj
           <Share2 className="size-4" />
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-[95vw] sm:max-w-[500px] bg-white text-white border-zinc-800 p-0">
+      <DialogContent className="max-w-[95vw] sm:max-w-[500px] bg-white border-zinc-800 p-0">
         <DialogHeader className="border-b border-zinc-800 px-4 sm:px-6 py-3 sm:py-4">
-          <DialogTitle className="text-base sm:text-lg font-semibold">Share project</DialogTitle>
+          <DialogTitle className="text-base sm:text-lg text-blue-700 font-semibold">Share project</DialogTitle>
         </DialogHeader>
 
         <div className="pb-4 sm:pb-6 pt-3">

@@ -10,7 +10,7 @@ import { useUpdateSession } from "@/lib/mutations/session";
 import { useSearchParams, usePathname } from "next/navigation";
 
 interface SessionContextData {
-  session: SessionData | null;
+  session: SessionData;
 }
 
 const SessionContext = createContext<SessionContextData | undefined>(undefined);
@@ -37,7 +37,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Allow access to shared projects without session
+  /* Allow access to shared projects without session
   if (!session.data && isSharedProject && isProjectPage) {
     return (
       <SessionContext.Provider value={{ session: null }}>
@@ -45,6 +45,8 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       </SessionContext.Provider>
     );
   }
+
+  */
 
   if (!session.data)
     return (

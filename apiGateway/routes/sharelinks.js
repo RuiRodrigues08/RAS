@@ -44,9 +44,9 @@ router.post(
  * @body Empty
  * @returns Project data with permission level
  */
-router.get("/share/:token", function (req, res, next) {
+router.get("/share/:token/:project", function (req, res, next) {
   axios
-    .get(projectsURL + `share/${req.params.token}`, {
+    .get(projectsURL + `share/${req.params.token}/${req.params.project}`,{
       httpsAgent: httpsAgent,
     })
     .then((resp) => res.status(200).jsonp(resp.data))

@@ -29,7 +29,7 @@ router.post("/:user/:project/share", (req, res, next) => {
             token: shareLink.token,
             permission: shareLink.permission,
             createdAt: shareLink.createdAt,
-            url: `/shared/${shareLink.token}`,
+            url: `/dashboard/${req.params.project}?token=${shareLink.token}`,
           });
         })
         .catch((err) => {
@@ -41,8 +41,8 @@ router.post("/:user/:project/share", (req, res, next) => {
 });
 
 // Get project by share token
-router.get("/share/:token", (req, res, next) => {
-  ShareLink.validateLink(req.params.token)
+router.get("/share/:token/:project", (req, res, next) => {
+  ShareLink.validateLink(req.params.token, req.params.project)
     .then(async (result) => {
       if (!result) {
         return res.status(404).jsonp('Share link not found or expired');

@@ -24,10 +24,10 @@ export const useGetProject = (uid: string, pid: string, token: string) => {
   });
 };
 
-export const useGetSharedProject = (pid: string, token?: string) => {
+export const useGetSharedProject = (tokenproj: string, pid: string,token?:string) => {
   return useQuery({
-    queryKey: ["sharedProject", pid, token],
-    queryFn: () => fetchSharedProject(pid, token),
+    queryKey: ["sharedProject", tokenproj, token],
+    queryFn: () => fetchSharedProject(tokenproj, pid, token),
   });
 };
 

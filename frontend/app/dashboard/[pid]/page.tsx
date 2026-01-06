@@ -1,9 +1,10 @@
 "use client";
 
-import { Download, LoaderCircle, OctagonAlert, Play } from "lucide-react";
+import Loading from "@/components/loading";
+import { AddImagesDialog } from "@/components/project-page/add-images-dialog";
+import { ModeToggle } from "@/components/project-page/mode-toggle";
 import { ProjectImageList } from "@/components/project-page/project-image-list";
 import { ViewToggle } from "@/components/project-page/view-toggle";
-import { AddImagesDialog } from "@/components/project-page/add-images-dialog";
 import { ShareProjectDialog } from "@/components/project-page/share-project-dialog";
 import { Button } from "@/components/ui/button";
 import { Toolbar } from "@/components/toolbar/toolbar";
@@ -13,26 +14,26 @@ import {
   useGetProjectResults,
   useGetSocket,
 } from "@/lib/queries/projects";
-import Loading from "@/components/loading";
-import { ProjectProvider, useProjectPermission } from "@/providers/project-provider";
+import { ProjectProvider } from "@/providers/project-provider";
 import { use, useEffect, useLayoutEffect, useState } from "react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { useSession } from "@/providers/session-provider";
+import { Card } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
+import { SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { useToast } from "@/hooks/use-toast";
 import {
   useDownloadProject,
   useDownloadProjectResults,
   useProcessProject,
 } from "@/lib/mutations/projects";
-import { useToast } from "@/hooks/use-toast";
 import { ProjectImage } from "@/lib/projects";
-import { Progress } from "@/components/ui/progress";
-import { Card } from "@/components/ui/card";
+import { useSession } from "@/providers/session-provider";
 import { Transition } from "@headlessui/react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
-import { ModeToggle } from "@/components/project-page/mode-toggle";
-import { SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
-import { useIsMobile } from "@/hooks/use-mobile";
+import { Download, LoaderCircle, OctagonAlert, Play, X } from "lucide-react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+
 
 export default function Project({
   params,
@@ -43,16 +44,14 @@ export default function Project({
   const session = useSession();
   const { pid } = resolvedParams;
   const searchParams = useSearchParams();
-  const isSharedProject = searchParams.get("auth") !== null;
+  const tokenProject = searchParams.get("token") ?? "";
   
-
-  const ownProject = useGetProject(
-    session?.user?._id ?? "", 
-    pid, 
-    session?.token ?? ""
+  const projectIsShared = tokenProject.length>0;
+  const project = projectIsShared ? useGetSharedProject(tokenProject, pid, session.token ): useGetProject(
+    session?.user?._id,
+    pid,
+    session?.token
   );
-  const sharedProject = useGetSharedProject(pid, session?.token);
-  const project = isSharedProject ? sharedProject : ownProject;
   const downloadProjectImages = useDownloadProject();
   const processProject = useProcessProject();
   const downloadProjectResults = useDownloadProjectResults();
@@ -70,9 +69,11 @@ export default function Project({
   const [processingProgress, setProcessingProgress] = useState<number>(0);
   const [processingSteps, setProcessingSteps] = useState<number>(1);
   const [waitingForPreview, setWaitingForPreview] = useState<string>("");
+  const [showCancel, setShowCancel] = useState<boolean>(false);
 
 
-  const isReadOnly = searchParams.get("auth") === "view"; 
+  //   ALTERAR LÓGICA PARA NOVO FLUXO 
+  // const isReadOnly = searchParams.get("auth") === "view"; 
 
   const totalProcessingSteps = (project.data?.tools.length ?? 0) * (project.data?.imgs.length ?? 0);
   const projectResults = useGetProjectResults(
@@ -91,7 +92,12 @@ export default function Project({
   useEffect(() => {
     function onProcessUpdate() {
       setProcessingSteps((prev) => prev + 1);
-      const progress = Math.min(Math.round((processingSteps * 100) / totalProcessingSteps), 100);
+
+      const progress = Math.min(
+        Math.round((processingSteps * 100) / totalProcessingSteps),
+        100
+      );
+
       setProcessingProgress(progress);
 
       if (processingSteps >= totalProcessingSteps) {
@@ -120,15 +126,33 @@ export default function Project({
     };
   }, [pid, processingSteps, qc, router, session?.token, session?.user?._id, socket.data, totalProcessingSteps, sidebar, isMobile, projectResults]);
 
-  if (project.isError) return (
-    <div className="flex size-full justify-center items-center h-screen p-8">
-      <Alert variant="destructive" className="w-fit max-w-[40rem]">
-        <OctagonAlert className="size-4" />
-        <AlertTitle>{project.error.name}</AlertTitle>
-        <AlertDescription>{project.error.message}</AlertDescription>
-      </Alert>
-    </div>
-  );
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+
+    if (processing) {
+      timer = setTimeout(() => {
+        setShowCancel(true);
+      }, 10000);
+    } else {
+      setShowCancel(false);
+    }
+
+    return () => clearTimeout(timer);
+  }, [processing]);
+
+  if (project.isError)
+    return (
+      <div className="flex size-full justify-center items-center h-screen p-8">
+        <Alert
+          variant="destructive"
+          className="w-fit max-w-[40rem] text-wrap truncate"
+        >
+          <OctagonAlert className="size-4" />
+          <AlertTitle>{project.error.name}</AlertTitle>
+          <AlertDescription>{project.error.message}</AlertDescription>
+        </Alert>
+      </div>
+    );
 
   if (project.isLoading || !project.data || projectResults.isLoading || !projectResults.data) return (
     <div className="flex justify-center items-center h-screen">
@@ -160,29 +184,35 @@ export default function Project({
                 <>
                   <Button
                     // RF45: Bloqueia o botão Apply se for apenas leitura OU sem sessão (requer backend)
-                    disabled={project.data.tools.length <= 0 || waitingForPreview !== "" || isReadOnly || !session}
+                    disabled={project.data.tools.length <= 0 || waitingForPreview !== "" || !session}
                     className="inline-flex"
                     onClick={() => {
-                      if (!session) {
-                        toast({ title: "Autenticação necessária", description: "Faça login para processar o projeto.", variant: "destructive" });
-                        return;
-                      }
-                      processProject.mutate(
-                        { uid: session.user._id, pid: project.data!._id, token: session.token },
+                      processProject.start.mutate(
+                        {
+                          uid: session.user._id,
+                          pid: project.data._id,
+                          token: session.token,
+                        },
                         {
                           onSuccess: () => {
                             setProcessing(true);
                             sidebar.setOpen(false);
                           },
-                          onError: (error) => toast({ title: "Ups!", description: error.message, variant: "destructive" }),
+                          onError: (error) => {
+                            toast({
+                              title: "Ups! An error occurred.",
+                              description: error.message,
+                              variant: "destructive",
+                            });
+                          },
                         }
                       );
                     }}
                   >
                     <Play /> Apply
                   </Button>
-                  {/* AddImagesDialog só mostra se não for read-only (pode ser edit sem sessão) */}
-                  {!isReadOnly && <AddImagesDialog />}
+                 
+                  <AddImagesDialog />
                 </>
               )}
 
@@ -191,13 +221,23 @@ export default function Project({
                 className="px-3"
                 disabled={!session}
                 onClick={() => {
-                  if (!session) {
-                    toast({ title: "Autenticação necessária", description: "Faça login para fazer download.", variant: "destructive" });
-                    return;
-                  }
-                  (mode === "edit" ? downloadProjectImages : downloadProjectResults).mutate(
-                    { uid: session.user._id, pid: project.data!._id, token: session.token, projectName: project.data!.name },
-                    { onSuccess: () => toast({ title: "Download concluído." }) }
+                  (mode === "edit"
+                    ? downloadProjectImages
+                    : downloadProjectResults
+                  ).mutate(
+                    {
+                      uid: session.user._id,
+                      pid: project.data._id,
+                      token: session.token,
+                      projectName: project.data.name,
+                    },
+                    {
+                      onSuccess: () => {
+                        toast({
+                          title: `Project ${project.data.name} downloaded.`,
+                        });
+                      },
+                    }
                   );
                 }}
               >
@@ -209,7 +249,7 @@ export default function Project({
               </Button>
 
               
-              {session && (
+              {session && !projectIsShared &&(
                 <ShareProjectDialog 
                   projectId={pid}
                   userId={session.user._id}
@@ -227,7 +267,7 @@ export default function Project({
 
         {/* Main Content */}
         <div className="h-full overflow-x-hidden flex">
-          {/* RF45: Toolbar já deve ter a lógica interna de opacidade, mas aqui também garantimos que renderiza */}
+         
           {mode !== "results" && <Toolbar />}
           <ProjectImageList setCurrentImageId={setCurrentImage} results={projectResults.data} />
         </div>
@@ -250,6 +290,37 @@ export default function Project({
               <LoaderCircle className="size-[1em] animate-spin" />
             </div>
             <Progress value={processingProgress} className="w-96" />
+            {showCancel && (
+              <Button
+                variant={"default"}
+                className="bg-red-600 hover:bg-red-500 mt-2"
+                onClick={() => {
+                  processProject.cancel.mutate(
+                    {
+                      uid: session.user._id,
+                      pid: project.data._id,
+                      token: session.token,
+                    },
+                    {
+                      onSuccess: () => {
+                        setProcessing(false);
+                        if (!isMobile) sidebar.setOpen(true);
+                      },
+                      onError: (error) => {
+                        toast({
+                          title: "Ups! An error occurred.",
+                          description: error.message,
+                          variant: "destructive",
+                        });
+                      },
+                    }
+                  );
+                }}
+              >
+                <X strokeWidth={2.5} />
+                Cancel
+              </Button>
+            )}
           </Card>
         </div>
       </Transition>
