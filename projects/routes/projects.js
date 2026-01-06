@@ -270,8 +270,6 @@ function process_msg() {
         params
       );
     } catch (error) {
-      console.error("Error processing message:", error);
-
       if (user_msg_id && timestamp && process) {
         send_msg_client_error(
           user_msg_id,
