@@ -37,6 +37,8 @@ export default function SaturationTool({ disabled }: { disabled: boolean }) {
       disabled={disabled}
       icon={Droplet}
       label="Saturation"
+      helpDescription="This tool adjusts the intensity of the colors."
+      helpMediaSrc="/gifs/Gif-Saturacao.gif"
     >
       <Slider
         defaultValue={[1]}

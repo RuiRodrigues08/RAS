@@ -13,6 +13,8 @@ export default function CropAITool({ disabled }: { disabled: boolean }) {
       label="AI Crop"
       isPremium
       noParams
+      helpDescription="This tool uses an AI model to crop your image."
+      helpMediaSrc="/gifs/Gif-Crop.gif"
     />
   );
 }

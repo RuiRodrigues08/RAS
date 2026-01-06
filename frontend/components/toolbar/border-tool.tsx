@@ -54,6 +54,8 @@ export default function BorderTool({ disabled }: { disabled: boolean }) {
       disabled={disabled}
       icon={Frame}
       label="Create Border"
+      helpDescription="This tool creates a border around your image."
+      helpMediaSrc="/gifs/Gif-Bordas.gif"
     >
       <div className="flex flex-col justify-center items-center gap-4">
         <div className="flex w-full justify-between items-center text-sm text-gray-500">

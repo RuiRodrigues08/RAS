@@ -13,6 +13,8 @@ export default function PeopleAITool({ disabled }: { disabled: boolean }) {
       label="AI People Detection"
       isPremium
       noParams
+      helpDescription="This tool uses an AI model to detect and highlight people in your image."
+      helpMediaSrc="/gifs/Gif-pessoas.gif"
     />
   );
 }
