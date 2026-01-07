@@ -98,6 +98,26 @@ export function ToolbarButton({
   const [prevTool, setPrevTool] = useState<ProjectToolResponse | undefined>(
     undefined,
   );
+  const [clickStartTime, setClickStartTime] = useState<number | null>(null);
+
+  const handlePointerDown = () => {
+    setClickStartTime(Date.now());
+  };
+
+  const handlePointerUp = () => {
+    if (clickStartTime) {
+      const clickDuration = Date.now() - clickStartTime;
+      // Se o click foi rápido (< 600ms), abre o popup
+      if (clickDuration < 600 && !disabled && preview.waiting !== tool.procedure && preview.waiting === "") {
+        setOpen(true);
+      }
+      setClickStartTime(null);
+    }
+  };
+
+  const handlePointerLeave = () => {
+    setClickStartTime(null);
+  };
   const [waiting, setWaiting] = useState<boolean>(false);
   const [timedout, setTimedout] = useState<boolean>(false);
   const [helpOpen, setHelpOpen] = useState<boolean>(false);
@@ -323,6 +343,9 @@ export function ToolbarButton({
               disabled ||
               (preview.waiting !== tool.procedure && preview.waiting !== "")
             }
+            onPointerDown={handlePointerDown}
+            onPointerUp={handlePointerUp}
+            onPointerLeave={handlePointerLeave}
           >
             <div>
               <TButton />
