@@ -107,7 +107,6 @@ export function ToolbarButton({
   const handlePointerUp = () => {
     if (clickStartTime) {
       const clickDuration = Date.now() - clickStartTime;
-      // Se o click foi rápido (< 600ms), abre o popup
       if (clickDuration < 600 && !disabled && preview.waiting !== tool.procedure && preview.waiting === "") {
         setOpen(true);
       }

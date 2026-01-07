@@ -117,13 +117,11 @@ export function Toolbar() {
     const newTools = [...tools];
     const [removed] = newTools.splice(draggedIndex, 1);
     
-    // Adjust target index if dragging downwards
     const targetIndex = draggedIndex < draggedOverIndex ? draggedOverIndex - 1 : draggedOverIndex;
     newTools.splice(targetIndex, 0, removed);
 
     setTools(newTools);
     
-    // Save to localStorage
     localStorage.setItem("toolbar-order", JSON.stringify(newTools.map(t => t.id)));
 
     setDraggedIndex(null);
