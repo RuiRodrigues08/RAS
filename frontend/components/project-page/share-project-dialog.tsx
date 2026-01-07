@@ -104,7 +104,7 @@ export function ShareProjectDialog({ projectId, userId, currentPath }: ShareProj
               <Button
                 onClick={handleGenerateLink}
                 disabled={createShareLink.isPending}
-                className="gap-2 h-9 sm:h-11 px-4 sm:px-6 bg-zinc-700 hover:bg-zinc-600 text-white border-0 text-sm sm:text-base"
+                className="gap-2 h-9 sm:h-11 px-4 sm:px-6 bg-blue hover:bg-zinc-600 text-white border-0 text-sm sm:text-base"
               >
                 <Copy className="h-3 w-3 sm:h-4 sm:w-4" />
                 {createShareLink.isPending ? "Gerando..." : "Copiar link"}

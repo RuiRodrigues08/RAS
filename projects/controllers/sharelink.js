@@ -39,6 +39,7 @@ module.exports.generateLink = async (projectId, permission) => {
 /**
  * Validate a share link token
  * @param {string} token - The share link token
+ * @param {string} projectReal - The project ID to validate
  * @returns {Promise<Object|null>} - The share link data with project info, or null if invalid
  */
 module.exports.validateLink = async (token, projectReal) => {

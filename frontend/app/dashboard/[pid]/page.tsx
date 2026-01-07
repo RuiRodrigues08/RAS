@@ -13,6 +13,7 @@ import {
   useGetSharedProject,
   useGetProjectResults,
   useGetSocket,
+  
 } from "@/lib/queries/projects";
 import { ProjectProvider } from "@/providers/project-provider";
 import { use, useEffect, useLayoutEffect, useState } from "react";
@@ -52,6 +53,9 @@ export default function Project({
     pid,
     session?.token
   );
+
+
+
   const downloadProjectImages = useDownloadProject();
   const processProject = useProcessProject();
   const downloadProjectResults = useDownloadProjectResults();

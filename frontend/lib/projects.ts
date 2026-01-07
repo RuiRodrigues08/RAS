@@ -17,6 +17,7 @@ export interface SingleProject {
   name: string;
   tools: ProjectToolResponse[];
   imgs: ProjectImage[];
+  permission?: "VIEWER" | "EDITOR";
 }
 export interface ProjectImage {
   _id: string;
@@ -105,8 +106,18 @@ export const fetchSharedProject = async (tokenproj: string, pid:string, token?: 
     name: response.data.name,
     imgs: response.data.imgs,
     tools: response.data.tools,
+    permission: response.data.permission,
   } as SingleProject;
 };
+
+export const getSharedProjectImages = async (tokenproj: string, pid: string, token: string) => {
+ 
+  const response = await api.get(`/projects/share/${tokenproj}/${pid}/images`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return response.data;
+};
+
 
 export const useGetSocket = (token: string) => {
   return useQuery({

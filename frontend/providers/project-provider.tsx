@@ -2,7 +2,6 @@
 
 import { ProjectImage, SingleProject } from "@/lib/projects";
 import { createContext, useContext } from "react";
-import { useSearchParams } from "next/navigation"; // 1. Import necessário
 
 interface ProjectContextData {
   project: SingleProject;
@@ -30,12 +29,16 @@ export function ProjectProvider({
     setWaiting: (waiting: string) => void;
   };
 }) {
-  // 3. Lógica para detetar a permissão via URL (RF45)
-  const searchParams = useSearchParams();
-  const authParam = searchParams.get("auth");
-  
-  // Se a URL tiver ?auth=view, a permissão é "view". Caso contrário, é "edit".
-  const permission = authParam === "view" ? "view" : "edit";
+  // Preferir a permissão fornecida pelo backend (quando o projeto é partilhado).
+  // O backend envia "VIEWER" ou "EDITOR" no campo `permission` para projetos partilhados.
+  // Removido fallback via URL; se não existir `permission` do backend assumimos que
+  // o utilizador é o proprietário e permitimos edição (`edit`).
+  let permission: "view" | "edit";
+  if ((project as any).permission) {
+    permission = (project as any).permission === "EDITOR" ? "edit" : "view";
+  } else {
+    permission = "edit";
+  }
 
   return (
     // Passamos a 'permission' para baixo na árvore de componentes

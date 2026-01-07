@@ -6,6 +6,7 @@ import {
   getProjectImages,
   ProjectImage,
   fetchProjectResults,
+  getSharedProjectImages
 } from "../projects";
 import { io } from "socket.io-client";
 import { api } from "../axios";
@@ -31,18 +32,7 @@ export const useGetSharedProject = (tokenproj: string, pid: string,token?:string
   });
 };
 
-export const useGetProjectImages = (
-  uid: string,
-  pid: string,
-  token: string,
-  initialData?: ProjectImage[],
-) => {
-  return useQuery({
-    queryKey: ["projectImages", uid, pid, token],
-    queryFn: () => getProjectImages(uid, pid, token),
-    initialData: initialData,
-  });
-};
+
 
 export const useGetSocket = (token: string) => {
   return useQuery({
