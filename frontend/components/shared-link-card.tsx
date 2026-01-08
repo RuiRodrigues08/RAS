@@ -82,10 +82,12 @@ export function ShareLinkCard({ data }: ShareLinkProps) {
       {
         onSuccess: () => {
           queryClient.invalidateQueries({
+            refetchType: "all",
             queryKey: ["sharedLinks", user._id, token],
           });
           queryClient.invalidateQueries({
-            queryKey: ["sharedProject"],
+            refetchType: "all",
+            queryKey: ["sharedProject", link.token, token],
           });
           toast({
             title: "Permission changed successfully!",

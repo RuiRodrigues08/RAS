@@ -18,14 +18,6 @@ import { LoaderCircle, Sparkle, type LucideIcon } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "../ui/dropdown-menu";
-import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
-import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -33,6 +25,14 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "../ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "../ui/dropdown-menu";
+import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 
 interface ToolbarButtonProps {
   open?: boolean;
@@ -85,28 +85,28 @@ export function ToolbarButton({
     session.user._id,
     project._id,
     session.token,
-    tokenProject?.length>0 ? tokenProject : undefined, 
+    tokenProject?.length > 0 ? tokenProject : undefined
   );
   const updateTool = useUpdateProjectTool(
     session.user._id,
     project._id,
-    session.token,
+    session.token
   );
   const deleteTool = useDeleteProjectTool(
     session.user._id,
     project._id,
-    session.token,
+    session.token
   );
   const previewEdits = usePreviewProjectResult();
 
   const [prevTool, setPrevTool] = useState<ProjectToolResponse | undefined>(
-    undefined,
+    undefined
   );
   const [waiting, setWaiting] = useState<boolean>(false);
   const [timedout, setTimedout] = useState<boolean>(false);
   const [helpOpen, setHelpOpen] = useState<boolean>(false);
 
-  function handleDeleteTool() {
+  function handleDeleteTool(previewAfter?: boolean) {
     if (prevTool) {
       deleteTool.mutate(
         {
@@ -116,6 +116,11 @@ export function ToolbarButton({
           token: session.token,
         },
         {
+          onSuccess: () => {
+            if (previewAfter) {
+              handlePreview();
+            }
+          },
           onError: (error) => {
             toast({
               title: "Ups! An error occurred.",
@@ -123,7 +128,7 @@ export function ToolbarButton({
               variant: "destructive",
             });
           },
-        },
+        }
       );
     }
   }
@@ -142,7 +147,7 @@ export function ToolbarButton({
           preview.setWaiting(tool.procedure);
           setTimeout(
             () => setTimedout(true),
-            10000 * (project.tools.length + 1),
+            10000 * (project.tools.length + 1)
           );
         },
         onError: (error) => {
@@ -152,7 +157,7 @@ export function ToolbarButton({
             variant: "destructive",
           });
         },
-      },
+      }
     );
   }
 
@@ -177,7 +182,7 @@ export function ToolbarButton({
               variant: "destructive",
             });
           },
-        },
+        }
       );
     } else {
       addTool.mutate(
@@ -201,7 +206,7 @@ export function ToolbarButton({
               variant: "destructive",
             });
           },
-        },
+        }
       );
     }
     setOpen(false);
@@ -273,20 +278,20 @@ export function ToolbarButton({
   const TButton = () => (
     <Tooltip>
       <TooltipTrigger asChild>
-      <Button
-        variant={variant}
-        className={`size-8 relative ${isPremium && variant === "default" && "bg-indigo-500 hover:bg-indigo-400"}`}
-        disabled={
-          disabled ||
-          (preview.waiting !== tool.procedure && preview.waiting !== "")
-        }
-        onClick={handleClick}
-      >
-        {waiting ? (
-          <LoaderCircle className="animate-spin" />
-        ) : (
-          <>
-            {isPremium ? (
+        <Button
+          variant={variant}
+          className={`size-8 relative ${isPremium && variant === "default" && "bg-indigo-500 hover:bg-indigo-400"}`}
+          disabled={
+            disabled ||
+            (preview.waiting !== tool.procedure && preview.waiting !== "")
+          }
+          onClick={handleClick}
+        >
+          {waiting ? (
+            <LoaderCircle className="animate-spin" />
+          ) : (
+            <>
+              {isPremium ? (
                 <div
                   className={
                     isPremium && variant === "default"
@@ -298,16 +303,16 @@ export function ToolbarButton({
                   <Sparkle className="h-3 w-3 absolute -top-1 -right-1" />
                   <span className="sr-only">{label}</span>
                 </div>
-            ) : (
-              <>
-                <Icon className="h-3.5 w-3.5" />
-                <span className="sr-only">{label}</span>
-              </>
-            )}
-          </>
+              ) : (
+                <>
+                  <Icon className="h-3.5 w-3.5" />
+                  <span className="sr-only">{label}</span>
+                </>
+              )}
+            </>
           )}
-      </Button>
-          </TooltipTrigger>
+        </Button>
+      </TooltipTrigger>
       <TooltipContent
         className={`ml-2 ${isPremium ? "bg-indigo-500" : "bg-white border border-gray-200 text-black"}`}
         side="right"
@@ -344,7 +349,9 @@ export function ToolbarButton({
           sideOffset={4}
         >
           <div className="flex items-center justify-between px-1 pb-0 pt-1">
-            <DropdownMenuLabel className="p-0 text-sm">{label}</DropdownMenuLabel>
+            <DropdownMenuLabel className="p-0 text-sm">
+              {label}
+            </DropdownMenuLabel>
             <Dialog open={helpOpen} onOpenChange={setHelpOpen}>
               <DialogTrigger asChild>
                 <Button
@@ -443,16 +450,28 @@ export function ToolbarButton({
             </div>
           ) : null}
           {helpFirst ? (
-            <div className="flex gap-2 pt-4">
+            <div className="flex-col gap-2">
+              <div className="flex gap-2 mt-4 my-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setHelpOpen(false)}
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={() => {
+                    handleAddTool(true);
+                    setHelpOpen(false);
+                  }}
+                  className="flex-1"
+                >
+                  Apply
+                </Button>
+              </div>
               <Button
                 variant="outline"
-                onClick={() => setHelpOpen(false)}
-                className="flex-1"
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="outline"
+                className="w-full"
                 onClick={() => {
                   handleDeleteTool();
                   setHelpOpen(false);
@@ -460,15 +479,6 @@ export function ToolbarButton({
                 disabled={!prevTool}
               >
                 Default
-              </Button>
-              <Button
-                onClick={() => {
-                  handleAddTool();
-                  setHelpOpen(false);
-                }}
-                className="flex-1"
-              >
-                Apply
               </Button>
             </div>
           ) : null}
