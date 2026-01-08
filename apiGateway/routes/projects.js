@@ -15,7 +15,7 @@ const key = fs.readFileSync(__dirname + "/../certs/selfsigned.key");
 const cert = fs.readFileSync(__dirname + "/../certs/selfsigned.crt");
 
 const httpsAgent = new https.Agent({
-  rejectUnauthorized: false, // (NOTE: this will disable client verification)
+  rejectUnauthorized: false,
   cert: cert,
   key: key,
 });
@@ -25,77 +25,49 @@ const upload = multer({ storage: storage });
 
 const projectsURL = "https://projects:9001/";
 
-// TODO Verify jwt
+const getAxiosConfig = (req, extraConfig = {}) => {
+  const headers = { ...(extraConfig.headers || {}) };
 
-/*
-Project structure
-{
-    "_id": Mongoose.type.id,
-    "user_id": Mongoose.type.id,
-    "name": String,
-    "imgs": [Image Structure],
-    "tools": [Tool Structure],
-}
+  if (req.headers["authorization"]) {
+    headers["Authorization"] = req.headers["authorization"];
+  }
 
-Image structure
-{
-    "_id": Mongoose.type.id,
-    "og_uri": String,
-    "new_uri": String
-}
+  if (req.headers["x-project-token"]) {
+    headers["x-project-token"] = req.headers["x-project-token"];
+  }
 
-Tool structure
-{
-    "_id": Mongoose.type._id,
-    "position": Number,
-    "procedure": String,
-    "params": Object
-}
-
-Post answer structure in case of success
-{
-    "acknowledged": Bool,
-    "modifiedCount": Number,
-    "upsertedId": null,
-    "upsertedCount": Number,
-    "matchedCount": Number
-}
-*/
-
-/**
- * Note: auth.checkToken is a midleware used to verify JWT
- */
+  return {
+    ...extraConfig,
+    httpsAgent: httpsAgent,
+    headers: headers,
+  };
+};
 
 /**
  * Get user's projects
- * @body Empty
- * @returns List of projects, each project has no information about it's images or tools
  */
 router.get("/:user", auth.checkToken, function (req, res, next) {
   axios
-    .get(projectsURL + `${req.params.user}`, { httpsAgent: httpsAgent })
+    .get(projectsURL + `${req.params.user}`, getAxiosConfig(req))
     .then((resp) => res.status(200).jsonp(resp.data))
     .catch((err) => res.status(500).jsonp("Error getting users"));
 });
 
 /**
  * Get user's project
- * @body Empty
- * @returns The required project
  */
 router.get("/:user/:project", auth.checkToken, function (req, res, next) {
   axios
-    .get(projectsURL + `${req.params.user}/${req.params.project}`, {
-      httpsAgent: httpsAgent,
-    })
+    .get(
+      projectsURL + `${req.params.user}/${req.params.project}`,
+      getAxiosConfig(req)
+    )
     .then((resp) => res.status(200).jsonp(resp.data))
     .catch((err) => res.status(500).jsonp("Error getting project"));
 });
 
 /**
  * Get project image
- * @body Empty
- * @returns The image url
  */
 router.get(
   "/:user/:project/img/:img",
@@ -105,9 +77,7 @@ router.get(
       .get(
         projectsURL +
           `${req.params.user}/${req.params.project}/img/${req.params.img}`,
-        {
-          httpsAgent: httpsAgent,
-        }
+        getAxiosConfig(req)
       )
       .then((resp) => {
         res.status(200).send(resp.data);
@@ -118,14 +88,13 @@ router.get(
 
 /**
  * Get project images
- * @body Empty
- * @returns The project's images
  */
 router.get("/:user/:project/imgs", auth.checkToken, function (req, res, next) {
   axios
-    .get(projectsURL + `${req.params.user}/${req.params.project}/imgs`, {
-      httpsAgent: httpsAgent,
-    })
+    .get(
+      projectsURL + `${req.params.user}/${req.params.project}/imgs`,
+      getAxiosConfig(req)
+    )
     .then((resp) => {
       res.status(200).send(resp.data);
     })
@@ -134,18 +103,17 @@ router.get("/:user/:project/imgs", auth.checkToken, function (req, res, next) {
 
 /**
  * Get project's processment result
- * @body Empty
- * @returns The required results, sent as a zip
  */
 router.get(
   "/:user/:project/process",
   auth.checkProjectTokenOrUser,
   function (req, res, next) {
+    // Aqui passamos o responseType arraybuffer juntamente com os headers
     axios
-      .get(projectsURL + `${req.params.user}/${req.params.project}/process`, {
-        httpsAgent: httpsAgent,
-        responseType: "arraybuffer",
-      })
+      .get(
+        projectsURL + `${req.params.user}/${req.params.project}/process`,
+        getAxiosConfig(req, { responseType: "arraybuffer" })
+      )
       .then((resp) => res.status(200).send(resp.data))
       .catch((err) =>
         res.status(500).jsonp("Error getting processing results file")
@@ -154,9 +122,7 @@ router.get(
 );
 
 /**
- * Get project's processment result
- * @body Empty
- * @returns The required results, sent as [{img_id, img_name, url}]
+ * Get project's processment result (URL list)
  */
 router.get(
   "/:user/:project/process/url",
@@ -165,9 +131,7 @@ router.get(
     axios
       .get(
         projectsURL + `${req.params.user}/${req.params.project}/process/url`,
-        {
-          httpsAgent: httpsAgent,
-        }
+        getAxiosConfig(req)
       )
       .then((resp) => {
         res.status(200).send(resp.data);
@@ -180,22 +144,16 @@ router.get(
 
 /**
  * Create new user's project
- * @body { "name": String }
- * @returns Created project's data
  */
 router.post("/:user", auth.checkToken, function (req, res, next) {
   axios
-    .post(projectsURL + `${req.params.user}`, req.body, {
-      httpsAgent: httpsAgent,
-    })
+    .post(projectsURL + `${req.params.user}`, req.body, getAxiosConfig(req))
     .then((resp) => res.status(201).jsonp(resp.data))
     .catch((err) => res.status(500).jsonp("Error creating new project"));
 });
 
 /**
  * Preview an image
- * @body Empty
- * @returns String indication preview is being processed
  */
 router.post(
   "/:user/:project/preview/:img",
@@ -206,7 +164,7 @@ router.post(
         projectsURL +
           `${req.params.user}/${req.params.project}/preview/${req.params.img}`,
         req.body,
-        { httpsAgent: httpsAgent }
+        getAxiosConfig(req)
       )
       .then((resp) => res.status(201).jsonp(resp.data))
       .catch((err) => {
@@ -218,9 +176,6 @@ router.post(
 
 /**
  * Add image to project
- * @body Empty
- * @file Image to be added
- * @returns Post answer structure in case of success
  */
 router.post(
   "/:user/:project/img",
@@ -233,16 +188,16 @@ router.post(
       contentType: req.file.mimetype,
     });
 
+    // Mantive a tua config de content-type, mas injetei os headers de auth
     axios
       .post(
         projectsURL + `${req.params.user}/${req.params.project}/img`,
         data,
-        {
+        getAxiosConfig(req, {
           headers: {
             "Content-Type": "multipart/form-data",
           },
-          httpsAgent: httpsAgent,
-        }
+        })
       )
       .then((resp) => res.sendStatus(201))
       .catch((err) => res.status(500).jsonp("Error adding image to project"));
@@ -251,26 +206,24 @@ router.post(
 
 /**
  * Add tool to project
- * @body { "procedure": String, "params": Object }
- * @returns Post answer structure in case of success
  */
-router.post("/:user/:project/tool", auth.checkProjectTokenOrUser, function (req, res, next) {
-  axios
-    .post(
-      projectsURL + `${req.params.user}/${req.params.project}/tool`,
-      req.body,
-      { httpsAgent: httpsAgent }
-    )
-    .then((resp) => res.status(201).jsonp(resp.data))
-    .catch((err) => {console.log(req.data)
-      res.status(500).jsonp("Error adding tool to project")}
-)});
-
+router.post(
+  "/:user/:project/tool",
+  auth.checkProjectTokenOrUser,
+  function (req, res, next) {
+    axios
+      .post(
+        projectsURL + `${req.params.user}/${req.params.project}/tool`,
+        req.body,
+        getAxiosConfig(req)
+      )
+      .then((resp) => res.status(201).jsonp(resp.data))
+      .catch((err) => res.status(err?.status).jsonp(err?.response?.data));
+  }
+);
 
 /**
- * Reorder tools of a project
- * @body [{ "position": Number, "procedure": String, "params": Object }] (Position is a unique number between 0 and req.body.length - 1)
- * @returns Post answer structure in case of success
+ * Reorder tools
  */
 router.post(
   "/:user/:project/reorder",
@@ -280,7 +233,7 @@ router.post(
       .post(
         projectsURL + `${req.params.user}/${req.params.project}/reorder`,
         req.body,
-        { httpsAgent: httpsAgent }
+        getAxiosConfig(req)
       )
       .then((resp) => res.status(201).jsonp(resp.data))
       .catch((err) => res.status(500).jsonp("Error reordering tools"));
@@ -288,9 +241,7 @@ router.post(
 );
 
 /**
- * Generate request to process a project
- * @body Empty
- * @returns String indicating process request has been created
+ * Process project
  */
 router.post(
   "/:user/:project/process",
@@ -300,7 +251,7 @@ router.post(
       .post(
         projectsURL + `${req.params.user}/${req.params.project}/process`,
         req.body,
-        { httpsAgent: httpsAgent }
+        getAxiosConfig(req)
       )
       .then((resp) => res.status(201).jsonp(resp.data))
       .catch((err) => res.status(err?.status).jsonp(err?.response?.data));
@@ -308,9 +259,7 @@ router.post(
 );
 
 /**
- * Generate request to cancel the processing of a project
- * @body Empty
- * @returns String indicating process request has been canceled
+ * Cancel process
  */
 router.post(
   "/:user/:project/process/cancel",
@@ -320,9 +269,7 @@ router.post(
       .post(
         projectsURL + `${req.params.user}/${req.params.project}/process/cancel`,
         req.body,
-        {
-          httpsAgent: httpsAgent,
-        }
+        getAxiosConfig(req)
       )
       .then((resp) => res.status(204).jsonp(resp.data))
       .catch((err) => res.status(err?.status).jsonp(err?.response?.data));
@@ -330,23 +277,21 @@ router.post(
 );
 
 /**
- * Update a specific project
- * @body { "name": String }
- * @returns Empty
+ * Update project
  */
 router.put("/:user/:project", auth.checkToken, function (req, res, next) {
   axios
-    .put(projectsURL + `${req.params.user}/${req.params.project}`, req.body, {
-      httpsAgent: httpsAgent,
-    })
+    .put(
+      projectsURL + `${req.params.user}/${req.params.project}`,
+      req.body,
+      getAxiosConfig(req)
+    )
     .then((_) => res.sendStatus(204))
     .catch((err) => res.status(500).jsonp("Error updating project details"));
 });
 
 /**
- * Update a tool from a project
- * @body { "params" : Object }
- * @returns Empty
+ * Update tool
  */
 router.put(
   "/:user/:project/tool/:tool",
@@ -357,7 +302,7 @@ router.put(
         projectsURL +
           `${req.params.user}/${req.params.project}/tool/${req.params.tool}`,
         req.body,
-        { httpsAgent: httpsAgent }
+        getAxiosConfig(req)
       )
       .then((_) => res.sendStatus(204))
       .catch((err) => res.status(500).jsonp("Error updating tool params"));
@@ -365,23 +310,20 @@ router.put(
 );
 
 /**
- * Delete a user's project
- * @body Empty
- * @returns Empty
+ * Delete project
  */
 router.delete("/:user/:project", auth.checkToken, function (req, res, next) {
   axios
-    .delete(projectsURL + `${req.params.user}/${req.params.project}`, {
-      httpsAgent: httpsAgent,
-    })
+    .delete(
+      projectsURL + `${req.params.user}/${req.params.project}`,
+      getAxiosConfig(req)
+    )
     .then((_) => res.sendStatus(204))
     .catch((err) => res.status(500).jsonp("Error deleting project"));
 });
 
 /**
- * Remove an image from a user's project
- * @body Empty
- * @returns Empty
+ * Delete image
  */
 router.delete(
   "/:user/:project/img/:img",
@@ -391,7 +333,7 @@ router.delete(
       .delete(
         projectsURL +
           `${req.params.user}/${req.params.project}/img/${req.params.img}`,
-        { httpsAgent: httpsAgent }
+        getAxiosConfig(req)
       )
       .then((_) => res.sendStatus(204))
       .catch((err) =>
@@ -401,9 +343,7 @@ router.delete(
 );
 
 /**
- * Remove a tool from a user's project
- * @body Empty
- * @returns Empty
+ * Delete tool
  */
 router.delete(
   "/:user/:project/tool/:tool",
@@ -413,7 +353,7 @@ router.delete(
       .delete(
         projectsURL +
           `${req.params.user}/${req.params.project}/tool/${req.params.tool}`,
-        { httpsAgent: httpsAgent }
+        getAxiosConfig(req)
       )
       .then((_) => res.sendStatus(204))
       .catch((err) =>

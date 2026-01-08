@@ -41,7 +41,7 @@ module.exports.checkToken = (req, res, next) => {
 // If no token or invalid token, request continues without user info
 module.exports.optionalToken = (req, res, next) => {
   const authHeader = req.headers["authorization"];
-  
+
   // No token provided - continue without authentication
   if (!authHeader || !authHeader.includes("Bearer ")) {
     req.user = null;
@@ -82,17 +82,15 @@ module.exports.optionalToken = (req, res, next) => {
   });
 };
 
+module.exports.checkProjectTokenOrUser = (req, res, next) => {
+  const tokenProject = req.body.tokenProject;
 
-module.exports.checkProjectTokenOrUser =  (req,res,next)=>{
-  const tokenProject =req.body.token;
-  
-  if(!tokenProject){
-    return  this.checkToken(req,res,next)
+  if (!tokenProject) {
+    return this.checkToken(req, res, next);
   }
-  if(!tokenProject.length===32){
+  if (!tokenProject.length === 32) {
     return res.status(401).jsonp("Invalid project token");
   }
-  req.tokenProject=tokenProject;
+  req.tokenProject = tokenProject;
   next();
-}
-
+};

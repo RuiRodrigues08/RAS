@@ -203,7 +203,6 @@ export default function Project({
               {mode !== "results" && (
                 <>
                   <Button
-                    // RF45: Bloqueia o botão Apply se for apenas leitura OU sem sessão (requer backend)
                     disabled={
                       project.data.tools.length <= 0 ||
                       waitingForPreview !== "" ||
@@ -216,6 +215,8 @@ export default function Project({
                           uid: session.user._id,
                           pid: project.data._id,
                           token: session.token,
+                          tokenProject:
+                            tokenProject?.length > 0 ? tokenProject : undefined,
                         },
                         {
                           onSuccess: () => {
@@ -328,6 +329,8 @@ export default function Project({
                       uid: session.user._id,
                       pid: project.data._id,
                       token: session.token,
+                      tokenProject:
+                        tokenProject?.length > 0 ? tokenProject : undefined,
                     },
                     {
                       onSuccess: () => {

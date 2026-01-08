@@ -33,7 +33,7 @@ import WatermarkTool from "./watermark-tool";
 export function Toolbar() {
   const searchParams = useSearchParams();
   const view = searchParams.get("view") ?? "grid";
-  const authParam = searchParams.get("auth");
+  const tokenProject = searchParams.get("token") ?? "";
   const project = useProjectInfo();
   const session = useSession();
   const [open, setOpen] = useState<boolean>(false);
@@ -42,9 +42,9 @@ export function Toolbar() {
   const disabled = view === "grid" || project.permission === "VIEWER";
 
   const clearTools = useClearProjectTools(
-    session?.user?._id ?? "",
+    session?.user?._id,
     project._id,
-    session?.token ?? ""
+    session?.token
   );
 
   return (
@@ -95,6 +95,8 @@ export function Toolbar() {
                   pid: project._id,
                   toolIds: project.tools.map((t) => t._id),
                   token: session.token,
+                  tokenProject:
+                    tokenProject.length > 0 ? tokenProject : undefined,
                 });
                 setOpen(false);
               }}

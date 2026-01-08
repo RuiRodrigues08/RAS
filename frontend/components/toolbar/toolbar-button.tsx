@@ -84,8 +84,7 @@ export function ToolbarButton({
   const addTool = useAddProjectTool(
     session.user._id,
     project._id,
-    session.token,
-    tokenProject?.length > 0 ? tokenProject : undefined
+    session.token
   );
   const updateTool = useUpdateProjectTool(
     session.user._id,
@@ -114,6 +113,7 @@ export function ToolbarButton({
           pid: project._id,
           toolId: prevTool._id,
           token: session.token,
+          tokenProject: tokenProject?.length > 0 ? tokenProject : undefined,
         },
         {
           onSuccess: () => {
@@ -140,6 +140,7 @@ export function ToolbarButton({
         pid: project._id,
         imageId: currentImage?._id ?? "",
         token: session.token,
+        tokenProject: tokenProject?.length > 0 ? tokenProject : undefined,
       },
       {
         onSuccess: () => {
@@ -170,6 +171,7 @@ export function ToolbarButton({
           toolId: prevTool._id,
           toolParams: tool.params,
           token: session.token,
+          tokenProject: tokenProject?.length > 0 ? tokenProject : undefined,
         },
         {
           onSuccess: () => {
@@ -194,6 +196,7 @@ export function ToolbarButton({
             position: project.tools.length,
           },
           token: session.token,
+          tokenProject: tokenProject?.length > 0 ? tokenProject : undefined,
         },
         {
           onSuccess: () => {

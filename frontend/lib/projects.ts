@@ -338,12 +338,16 @@ export const downloadProjectImages = async ({
   uid,
   pid,
   token,
+  tokenProj,
 }: {
   uid: string;
   pid: string;
   token: string;
+  tokenProj?: string;
 }) => {
-  const project = await fetchProject(uid, pid, token);
+  const project = tokenProj
+    ? await fetchSharedProject(tokenProj, pid)
+    : await fetchProject(uid, pid, token);
   const zip = new JSZip();
 
   for (const image of project.imgs) {
@@ -423,19 +427,27 @@ export const previewProjectImage = async ({
   pid,
   imageId,
   token,
+  tokenProject,
 }: {
   uid: string;
   pid: string;
   imageId: string;
   token: string;
+  tokenProject?: string;
 }) => {
+  const headers: Record<string, string> = {
+    Authorization: `Bearer ${token}`,
+  };
+
+  if (tokenProject) {
+    headers["x-project-token"] = tokenProject;
+  }
+
   const response = await api.post(
     `/projects/${uid}/${pid}/preview/${imageId}`,
     {},
     {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
+      headers,
     }
   );
 
@@ -456,19 +468,34 @@ export const addProjectTool = async ({
   token: string;
   tokenProject?: string;
 }) => {
-  const response = await api.post(
-    `/projects/${uid}/${pid}/tool`,
-    {
-      ...tool,tokenProject: tokenProject
-    },
-    {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    }
-  );
+  try {
+    const headers: Record<string, string> = {
+      Authorization: `Bearer ${token}`,
+    };
 
-  if (response.status !== 201) throw new Error("Failed to add tool");
+    if (tokenProject) {
+      console.log("11111111111111122222232323232323");
+      headers["x-project-token"] = tokenProject;
+    }
+    console.log(headers);
+
+    const response = await api.post(
+      `/projects/${uid}/${pid}/tool`,
+      {
+        ...tool,
+      },
+      {
+        headers,
+      }
+    );
+
+    if (response.status !== 201) throw new Error("Failed to add tool");
+  } catch (error) {
+    if (isAxiosError(error)) {
+      throw new Error(error.response?.data);
+    }
+    throw error;
+  }
 };
 
 export const updateProjectTool = async ({
@@ -477,26 +504,41 @@ export const updateProjectTool = async ({
   toolId,
   toolParams,
   token,
+  tokenProject,
 }: {
   uid: string;
   pid: string;
   toolId: string;
   toolParams: ToolParams;
   token: string;
+  tokenProject?: string;
 }) => {
-  const response = await api.put(
-    `/projects/${uid}/${pid}/tool/${toolId}`,
-    {
-      params: toolParams,
-    },
-    {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    }
-  );
+  try {
+    const headers: Record<string, string> = {
+      Authorization: `Bearer ${token}`,
+    };
 
-  if (response.status !== 204) throw new Error("Failed to update tool");
+    if (tokenProject) {
+      headers["x-project-token"] = tokenProject;
+    }
+
+    const response = await api.put(
+      `/projects/${uid}/${pid}/tool/${toolId}`,
+      {
+        params: toolParams,
+      },
+      {
+        headers,
+      }
+    );
+
+    if (response.status !== 204) throw new Error("Failed to update tool");
+  } catch (error) {
+    if (isAxiosError(error)) {
+      throw new Error(error.response?.data);
+    }
+    throw error;
+  }
 };
 
 export const deleteProjectTool = async ({
@@ -504,19 +546,37 @@ export const deleteProjectTool = async ({
   pid,
   toolId,
   token,
+  tokenProject,
 }: {
   uid: string;
   pid: string;
   toolId: string;
   token: string;
+  tokenProject?: string;
 }) => {
-  const response = await api.delete(`/projects/${uid}/${pid}/tool/${toolId}`, {
-    headers: {
+  try {
+    const headers: Record<string, string> = {
       Authorization: `Bearer ${token}`,
-    },
-  });
+    };
 
-  if (response.status !== 204) throw new Error("Failed to remove tool");
+    if (tokenProject) {
+      headers["x-project-token"] = tokenProject;
+    }
+
+    const response = await api.delete(
+      `/projects/${uid}/${pid}/tool/${toolId}`,
+      {
+        headers,
+      }
+    );
+
+    if (response.status !== 204) throw new Error("Failed to remove tool");
+  } catch (error) {
+    if (isAxiosError(error)) {
+      throw new Error(error.response?.data);
+    }
+    throw error;
+  }
 };
 
 export const clearProjectTools = async ({
@@ -524,14 +584,16 @@ export const clearProjectTools = async ({
   pid,
   token,
   toolIds,
+  tokenProject,
 }: {
   uid: string;
   pid: string;
   token: string;
   toolIds: string[];
+  tokenProject?: string;
 }) => {
   for (const toolId of toolIds) {
-    await deleteProjectTool({ uid, pid, toolId, token });
+    await deleteProjectTool({ uid, pid, toolId, token, tokenProject });
   }
 };
 
@@ -655,19 +717,27 @@ export const processProject = async ({
   uid,
   pid,
   token,
+  tokenProject,
 }: {
   uid: string;
   pid: string;
   token: string;
+  tokenProject?: string;
 }) => {
   try {
+    const headers: Record<string, string> = {
+      Authorization: `Bearer ${token}`,
+    };
+
+    if (tokenProject) {
+      headers["x-project-token"] = tokenProject;
+    }
+
     const response = await api.post<string>(
       `/projects/${uid}/${pid}/process`,
       {},
       {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers,
       }
     );
 
@@ -686,19 +756,27 @@ export const cancelProcessProject = async ({
   uid,
   pid,
   token,
+  tokenProject,
 }: {
   uid: string;
   pid: string;
   token: string;
+  tokenProject?: string;
 }) => {
   try {
+    const headers: Record<string, string> = {
+      Authorization: `Bearer ${token}`,
+    };
+
+    if (tokenProject) {
+      headers["x-project-token"] = tokenProject;
+    }
+
     const response = await api.post(
       `/projects/${uid}/${pid}/process/cancel`,
       {},
       {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers,
       }
     );
 

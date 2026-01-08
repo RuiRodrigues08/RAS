@@ -20,8 +20,6 @@ import {
 } from "../projects";
 import { createBlobUrlFromFile, downloadBlob } from "../utils";
 
-
-
 export const useAddProject = (uid: string, token: string) => {
   const qc = useQueryClient();
   return useMutation({
@@ -164,7 +162,7 @@ export const useProcessProject = () => {
   return { start, cancel };
 };
 
-export const useAddProjectTool = (uid: string, pid: string, token: string, tokenProject?: string) => {
+export const useAddProjectTool = (uid: string, pid: string, token: string) => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: addProjectTool,
@@ -180,7 +178,7 @@ export const useAddProjectTool = (uid: string, pid: string, token: string, token
       qc.invalidateQueries({
         refetchType: "all",
         queryKey: ["sharedProject"],
-      })
+      });
     },
   });
 };
@@ -243,6 +241,10 @@ export const useClearProjectTools = (
       qc.invalidateQueries({
         refetchType: "all",
         queryKey: ["projectResults", uid, pid, token],
+      });
+      qc.invalidateQueries({
+        refetchType: "all",
+        queryKey: ["sharedProject"],
       });
     },
   });
