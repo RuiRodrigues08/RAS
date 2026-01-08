@@ -131,4 +131,19 @@ router.patch("/share/:user", (req, res, next) => {
     );
 });
 
+router.put("/share/:token/:user/revoke", (req, res, next) => {
+  ShareLink.revokeLink(req.params.token)
+    .then((result) => {
+      if (!result) {
+        return res.status(404).jsonp("Share link not found or expired");
+      }
+      res.status(200).jsonp("Share link revoked");
+    })
+    .catch((err) =>
+      res
+        .status(err?.status || 500)
+        .jsonp(err?.message || "Error revoking share link")
+    );
+});
+
 module.exports = router;

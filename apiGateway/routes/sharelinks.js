@@ -76,4 +76,16 @@ router.patch("/share/:user", auth.checkToken, function (req, res, next) {
     .catch((err) => res.status(err?.status).jsonp(err?.response?.data));
 });
 
+router.put("/share/:token/:user/revoke", auth.checkToken, function (req, res, next) {
+  axios
+    .put(projectsURL + `share/${req.params.token}/${req.params.user}/revoke`, req.body, {
+      httpsAgent: httpsAgent,
+      headers: {
+        Authorization: req.headers.authorization,
+      },
+    })
+    .then((resp) => res.status(200).jsonp(resp.data))
+    .catch((err) => res.status(err?.status).jsonp(err?.response?.data));
+});
+
 module.exports = router;

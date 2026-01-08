@@ -30,6 +30,7 @@ module.exports.generateLink = async (projectId, permission) => {
     token: token,
     projectId: projectId,
     permission: permission,
+    deleted: false,
   };
 
   const created = await ShareLink.create(shareLink);
@@ -43,7 +44,7 @@ module.exports.generateLink = async (projectId, permission) => {
  * @returns {Promise<Object|null>} - The share link data with project info, or null if invalid
  */
 module.exports.validateLink = async (token, projectReal) => {
-  const shareLink = await ShareLink.findOne({ token: token }).exec();
+  const shareLink = await ShareLink.findOne({ token: token, deleted: false }).exec();
 
   if (!shareLink) {
     return null;
@@ -76,7 +77,7 @@ module.exports.getAllUserLinks = async (uid) => {
   }
 
   const links = await ShareLink.find()
-    .where({ projectId: { $in: projects.map((p) => p._id) } })
+    .where({ projectId: { $in: projects.map((p) => p._id) }, deleted: false })
     .exec();
 
   if (links.length === 0) {
@@ -95,7 +96,7 @@ module.exports.getAllUserLinks = async (uid) => {
 
 module.exports.editPermission = async (token, permission, user) => {
   try {
-    const shareLink = await ShareLink.findOne({ token: token }).exec();
+    const shareLink = await ShareLink.findOne({ token: token, deleted: false }).exec();
 
     if (!shareLink) {
       return null;
@@ -122,6 +123,42 @@ module.exports.editPermission = async (token, permission, user) => {
     return await ShareLink.updateOne(
       { _id: shareLink._id },
       { $set: { permission: permission } }
+    ).exec();
+  } catch (err) {
+    throw err;
+  }
+};
+
+/**
+ * Revoke a share link token
+ * @param {string} token - The share link token
+ * @returns {Promise<Object|null>} - The share link data with project info, or null if invalid
+ */
+module.exports.revokeLink = async (token, userId) => {
+  try {
+    const shareLink = await ShareLink.findOne({ token: token }).exec();
+
+    if (!shareLink) {
+      return null;
+    }
+
+    const project = await Project.findOne({ _id: shareLink.projectId }).exec();
+
+    if (!project) {
+      return null;
+    }
+
+    if (project.user_id.toString() !== userId) {
+      const error = new Error(
+        "You don't have permission to revoke this share link"
+      );
+      error.status = 403;
+      throw error;
+    }
+
+    return await ShareLink.updateOne(
+      { _id: shareLink._id },
+      { $set: { deleted: true, deletedAt: new Date() } }
     ).exec();
   } catch (err) {
     throw err;

@@ -14,6 +14,8 @@ const shareLinkSchema = new mongoose.Schema({
     required: true,
   },
   createdAt: { type: Date, default: Date.now },
+  deletedAt: { type: Date, default: null },
+  deleted: { type: Boolean, default: false },
 });
 
 shareLinkSchema.index({ token: 1 });

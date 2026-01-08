@@ -13,6 +13,7 @@ import {
   downloadProjectImages,
   downloadProjectResults,
   editShareLink,
+  revokeShareLink,
   previewProjectImage,
   processProject,
   updateProject,
@@ -259,5 +260,11 @@ export const useCreateShareLink = () => {
 export const useEditShareLink = () => {
   return useMutation({
     mutationFn: editShareLink,
+  });
+};
+
+export const useRevokeShareLink = () => {
+  return useMutation({
+    mutationFn: revokeShareLink,
   });
 };
