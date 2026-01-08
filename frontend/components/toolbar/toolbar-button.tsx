@@ -15,7 +15,7 @@ import {
 } from "@/providers/project-provider";
 import { useSession } from "@/providers/session-provider";
 import { LoaderCircle, Sparkle, type LucideIcon } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
   DropdownMenu,
@@ -78,10 +78,14 @@ export function ToolbarButton({
   const socket = useGetSocket(session.token);
 
   const currentImage = useCurrentImage();
+  const params = useSearchParams();
+  const tokenProject = params.get("token") || "";
+
   const addTool = useAddProjectTool(
     session.user._id,
     project._id,
     session.token,
+    tokenProject?.length>0 ? tokenProject : undefined, 
   );
   const updateTool = useUpdateProjectTool(
     session.user._id,

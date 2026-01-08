@@ -20,6 +20,10 @@ module.exports.update = (user_id, project_id, project) => {
   return Project.updateOne({ user_id: user_id, _id: project_id }, project);
 };
 
+module.exports.updateById = (project, project_id) => {
+  return Project.updateOne({_id: project_id }, project);
+}
+
 module.exports.delete = (user_id, project_id) => {
   return Project.deleteOne({ user_id: user_id, _id: project_id });
 };

@@ -82,17 +82,17 @@ export function ShareProjectDialog({
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-[95vw] sm:max-w-[500px] bg-white border-zinc-800 p-0">
-        <DialogHeader className="border-b border-zinc-800 px-4 sm:px-6 py-3 sm:py-4">
+        <DialogHeader className="border-b border-blue-200 px-4 sm:px-6 py-3 sm:py-4">
           <DialogTitle className="text-base sm:text-lg text-blue-700 font-semibold">
             Share project
           </DialogTitle>
         </DialogHeader>
 
         <div className="pb-4 sm:pb-6 pt-3">
-          <div className="px-4 sm:px-6 pb-4 sm:pb-8 border-b border-zinc-800">
+          <div className="px-4 sm:px-6 pb-4 sm:pb-8 border-b border-blue-200">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
               <div className="flex-1 w-full sm:w-auto">
-                <p className="text-sm sm:text-base text-zinc-300 leading-relaxed">
+                <p className="text-sm sm:text-base text-black-300 leading-relaxed">
                   Escolha que tipo de permissão deseja atribuir ao link gerado
                 </p>
               </div>
@@ -100,24 +100,24 @@ export function ShareProjectDialog({
               <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto justify-end">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <button className="flex items-center gap-2 text-base text-white hover:text-zinc-300 transition-colors font-medium">
+                    <button className="flex items-center gap-2 text-base text-zinc hover:text-black-300 transition-colors font-medium">
                       {sharePermission === "edit" ? "Editar" : "Visualizar"}
                       <ChevronDown className="h-4 w-4" />
                     </button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent
                     align="end"
-                    className="bg-zinc-800 border-zinc-700 text-white min-w-[140px]"
+                    className="bg-white border-blue-700 text-zinc min-w-[140px]"
                   >
                     <DropdownMenuItem
                       onClick={() => setSharePermission("edit")}
-                      className="hover:bg-zinc-700 cursor-pointer"
+                      
                     >
                       Editar
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       onClick={() => setSharePermission("view")}
-                      className="hover:bg-zinc-700 cursor-pointer"
+                      
                     >
                       Visualizar
                     </DropdownMenuItem>
@@ -127,7 +127,7 @@ export function ShareProjectDialog({
                 <Button
                   onClick={handleGenerateLink}
                   disabled={createShareLink.isPending}
-                  className="gap-2 h-9 sm:h-11 px-4 sm:px-6 bg-blue hover:bg-zinc-600 text-white border-0 text-sm sm:text-base"
+                  className="gap-2 h-9 sm:h-11 px-4 sm:px-6 bg-blue hover:bg-white-600 text-blue border-0 text-sm sm:text-base"
                 >
                   <Copy className="h-3 w-3 sm:h-4 sm:w-4" />
                   {createShareLink.isPending ? "Gerando..." : "Copiar link"}

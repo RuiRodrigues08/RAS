@@ -81,3 +81,18 @@ module.exports.optionalToken = (req, res, next) => {
     }
   });
 };
+
+
+module.exports.checkProjectTokenOrUser =  (req,res,next)=>{
+  const tokenProject =req.body.token;
+  
+  if(!tokenProject){
+    return  this.checkToken(req,res,next)
+  }
+  if(!tokenProject.length===32){
+    return res.status(401).jsonp("Invalid project token");
+  }
+  req.tokenProject=tokenProject;
+  next();
+}
+

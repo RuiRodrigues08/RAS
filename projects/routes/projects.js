@@ -1,3 +1,4 @@
+
 var express = require("express");
 var router = express.Router();
 const axios = require("axios");
@@ -13,7 +14,7 @@ const mime = require("mime-types");
 const JSZip = require("jszip");
 
 const { v4: uuidv4 } = require("uuid");
-
+const Sharelink = require("../controllers/sharelink");
 const {
   send_msg_tool,
   send_msg_client,
@@ -708,12 +709,25 @@ router.post(
 // Add new tool to a project
 router.post("/:user/:project/tool", (req, res, next) => {
   // Reject posts to tools that don't fullfil the requirements
+
   if (!req.body.procedure || !req.body.params) {
     res
       .status(400)
       .jsonp(`A tool should have a procedure and corresponding parameters`);
     return;
   }
+  
+  if (req.tokenProject ){
+    Sharelink.validateLink(req.token , req.params.project)
+    .then(async (result) => {
+      if (!result) {
+        return res.status(404).jsonp("Share link not found or expired");
+      }
+      if(!result.permission === 'EDITOR')
+        return res.status(403).jsonp("Share link does not have edit permissions");
+      })
+      .catch((err) => { res.status(500).jsonp(err?.message); });
+ }
 
   let required_types = ["free", "premium"];
 
@@ -729,7 +743,9 @@ router.post("/:user/:project/tool", (req, res, next) => {
       }
 
       // Get project and insert new tool
-      Project.getOne(req.params.user, req.params.project)
+      (req.tokenProject.length>0 ? Project.getById(req.params.project) : 
+      Project.getOne(req.params.user, req.params.project))
+
         .then((project) => {
           const tool = {
             position: project["tools"].length,
@@ -738,7 +754,7 @@ router.post("/:user/:project/tool", (req, res, next) => {
 
           project["tools"].push(tool);
 
-          Project.update(req.params.user, req.params.project, project)
+          Project.updateById(project, req.params.project)
             .then((_) => res.sendStatus(204))
             .catch((_) =>
               res.status(503).jsonp(`Error updating project information`)

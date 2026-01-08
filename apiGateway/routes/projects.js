@@ -139,7 +139,7 @@ router.get("/:user/:project/imgs", auth.checkToken, function (req, res, next) {
  */
 router.get(
   "/:user/:project/process",
-  auth.checkToken,
+  auth.checkProjectTokenOrUser,
   function (req, res, next) {
     axios
       .get(projectsURL + `${req.params.user}/${req.params.project}/process`, {
@@ -160,7 +160,7 @@ router.get(
  */
 router.get(
   "/:user/:project/process/url",
-  auth.checkToken,
+  auth.checkProjectTokenOrUser,
   function (req, res, next) {
     axios
       .get(
@@ -199,7 +199,7 @@ router.post("/:user", auth.checkToken, function (req, res, next) {
  */
 router.post(
   "/:user/:project/preview/:img",
-  auth.checkToken,
+  auth.checkProjectTokenOrUser,
   function (req, res, next) {
     axios
       .post(
@@ -254,7 +254,7 @@ router.post(
  * @body { "procedure": String, "params": Object }
  * @returns Post answer structure in case of success
  */
-router.post("/:user/:project/tool", auth.checkToken, function (req, res, next) {
+router.post("/:user/:project/tool", auth.checkProjectTokenOrUser, function (req, res, next) {
   axios
     .post(
       projectsURL + `${req.params.user}/${req.params.project}/tool`,
@@ -262,8 +262,10 @@ router.post("/:user/:project/tool", auth.checkToken, function (req, res, next) {
       { httpsAgent: httpsAgent }
     )
     .then((resp) => res.status(201).jsonp(resp.data))
-    .catch((err) => res.status(500).jsonp("Error adding tool to project"));
-});
+    .catch((err) => {console.log(req.data)
+      res.status(500).jsonp("Error adding tool to project")}
+)});
+
 
 /**
  * Reorder tools of a project
@@ -348,7 +350,7 @@ router.put("/:user/:project", auth.checkToken, function (req, res, next) {
  */
 router.put(
   "/:user/:project/tool/:tool",
-  auth.checkToken,
+  auth.checkProjectTokenOrUser,
   function (req, res, next) {
     axios
       .put(
@@ -405,7 +407,7 @@ router.delete(
  */
 router.delete(
   "/:user/:project/tool/:tool",
-  auth.checkToken,
+  auth.checkProjectTokenOrUser,
   function (req, res, next) {
     axios
       .delete(

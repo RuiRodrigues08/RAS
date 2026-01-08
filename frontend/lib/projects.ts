@@ -448,16 +448,18 @@ export const addProjectTool = async ({
   pid,
   tool,
   token,
+  tokenProject,
 }: {
   uid: string;
   pid: string;
   tool: ProjectTool;
   token: string;
+  tokenProject?: string;
 }) => {
   const response = await api.post(
     `/projects/${uid}/${pid}/tool`,
     {
-      ...tool,
+      ...tool,tokenProject: tokenProject
     },
     {
       headers: {
