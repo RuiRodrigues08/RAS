@@ -31,6 +31,7 @@ import { useEditShareLink } from "@/lib/mutations/projects";
 import type { Project } from "@/lib/projects";
 import { useSession } from "@/providers/session-provider";
 import { useQueryClient } from "@tanstack/react-query";
+import { useRevokeShareLink } from "@/lib/mutations/projects";
 
 interface ShareLinkProps {
   data: {
@@ -51,6 +52,7 @@ export function ShareLinkCard({ data }: ShareLinkProps) {
   const queryClient = useQueryClient();
   const edit = useEditShareLink();
   const { token, user } = useSession();
+  const revoke = useRevokeShareLink();
 
   const formattedDate = new Intl.DateTimeFormat("pt-PT", {
     day: "2-digit",
@@ -106,7 +108,34 @@ export function ShareLinkCard({ data }: ShareLinkProps) {
   };
 
   const handleRevoke = () => {
-    // TO DO - GON
+    revoke.mutate(
+      {
+        tokenProj: link.token,
+        token: token,
+        uid: user._id,
+      },
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries({
+            queryKey: ["sharedLinks", user._id, token],
+          });
+          queryClient.invalidateQueries({
+            queryKey: ["sharedProject"],
+          });
+          toast({
+            title: "Permission changed successfully!",
+            duration: 2000,
+          });
+        },
+        onError: () => {
+          toast({
+            title: "Failed to change permission",
+            variant: "destructive",
+            duration: 2000,
+          });
+        },
+      }
+    );
     console.log(`Revoking link ${link._id}`);
   };
 

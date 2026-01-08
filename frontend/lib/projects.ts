@@ -164,6 +164,35 @@ export const editShareLink = async ({
   }
 };
 
+export const revokeShareLink = async ({
+  tokenProj,
+  token,
+  uid,
+}: {
+  tokenProj: string;
+  token: string;
+  uid: string;
+}) => {
+  try {
+    await api.put(
+      `/projects/share/${tokenProj}/${uid}/revoke`,
+      {},
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+  } catch (e) {
+    if (isAxiosError(e)) {
+      if (e.response?.status === 404) return [];
+      throw new Error(e.response?.data);
+    }
+    throw e;
+  }
+};
+
 export const useGetSocket = (token: string) => {
   return useQuery({
     queryKey: ["socket", token],
