@@ -102,7 +102,7 @@ export function ToolbarButton({
   const [timedout, setTimedout] = useState<boolean>(false);
   const [helpOpen, setHelpOpen] = useState<boolean>(false);
 
-  function handleDeleteTool() {
+  function handleDeleteTool(previewAfter?: boolean) {
     if (prevTool) {
       deleteTool.mutate(
         {
@@ -112,6 +112,11 @@ export function ToolbarButton({
           token: session.token,
         },
         {
+          onSuccess: () => {
+            if (previewAfter) {
+              handlePreview();
+            }
+          },
           onError: (error) => {
             toast({
               title: "Ups! An error occurred.",
@@ -450,7 +455,7 @@ export function ToolbarButton({
               <Button
                 variant="outline"
                 onClick={() => {
-                  handleDeleteTool();
+                  handleDeleteTool(true);
                   setHelpOpen(false);
                 }}
                 disabled={!prevTool}
@@ -459,7 +464,7 @@ export function ToolbarButton({
               </Button>
               <Button
                 onClick={() => {
-                  handleAddTool();
+                  handleAddTool(true);
                   setHelpOpen(false);
                 }}
                 className="flex-1"

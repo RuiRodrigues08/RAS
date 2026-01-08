@@ -13,6 +13,7 @@ export default function TextAITool({ disabled }: { disabled: boolean }) {
       label="AI Text Detection"
       isPremium
       noParams
+      helpFirst
       helpDescription="This tool uses an AI model to detect and highlight text in your image."
       helpMediaSrc="/gifs/Gif-Texto.gif"
     />
