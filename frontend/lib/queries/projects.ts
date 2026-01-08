@@ -29,7 +29,7 @@ export const useGetSharedProject = (
   token?: string
 ) => {
   return useQuery({
-    queryKey: ["sharedProject", tokenproj, token],
+    queryKey: ["sharedProject", pid, tokenproj, token],
     queryFn: () => fetchSharedProject(tokenproj, pid, token),
   });
 };
