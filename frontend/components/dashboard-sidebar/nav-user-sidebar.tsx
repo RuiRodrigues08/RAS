@@ -3,9 +3,14 @@ import {
   ChevronsUpDown,
   CreditCard,
   LogOut,
+  Share2,
   Sparkles,
 } from "lucide-react";
 
+import { useLogout } from "@/lib/mutations/session";
+import { useSession } from "@/providers/session-provider";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Avatar, AvatarFallback } from "../ui/avatar";
 import {
   DropdownMenu,
@@ -22,10 +27,6 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "../ui/sidebar";
-import Link from "next/link";
-import { useLogout } from "@/lib/mutations/session";
-import { useRouter } from "next/navigation";
-import { useSession } from "@/providers/session-provider";
 
 export default function NavUser({
   user,
@@ -106,6 +107,12 @@ export default function NavUser({
                 <Link href="/dashboard/account?ref=/dashboard">
                   <BadgeCheck />
                   Account
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/dashboard/account/share-links?ref=/dashboard">
+                  <Share2 />
+                  Share Links
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>

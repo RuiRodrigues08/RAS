@@ -29,7 +29,6 @@ export function ProjectProvider({
     setWaiting: (waiting: string) => void;
   };
 }) {
-  // Preferir a permissão fornecida pelo backend (quando o projeto é partilhado).
   // O backend envia "VIEWER" ou "EDITOR" no campo `permission` para projetos partilhados.
   // Removido fallback via URL; se não existir `permission` do backend assumimos que
   // o utilizador é o proprietário e permitimos edição (`edit`).
@@ -41,8 +40,9 @@ export function ProjectProvider({
   }
 
   return (
-    // Passamos a 'permission' para baixo na árvore de componentes
-    <ProjectContext.Provider value={{ project, currentImage, preview, permission }}>
+    <ProjectContext.Provider
+      value={{ project, currentImage, preview, permission }}
+    >
       {children}
     </ProjectContext.Provider>
   );
@@ -76,7 +76,9 @@ export function usePreview() {
 export function useProjectPermission() {
   const context = useContext(ProjectContext);
   if (context === undefined) {
-    throw new Error("useProjectPermission() must be used within a ProjectProvider");
+    throw new Error(
+      "useProjectPermission() must be used within a ProjectProvider"
+    );
   }
   return context.permission;
 }

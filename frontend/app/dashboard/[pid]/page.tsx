@@ -4,20 +4,11 @@ import Loading from "@/components/loading";
 import { AddImagesDialog } from "@/components/project-page/add-images-dialog";
 import { ModeToggle } from "@/components/project-page/mode-toggle";
 import { ProjectImageList } from "@/components/project-page/project-image-list";
-import { ViewToggle } from "@/components/project-page/view-toggle";
 import { ShareProjectDialog } from "@/components/project-page/share-project-dialog";
-import { Button } from "@/components/ui/button";
+import { ViewToggle } from "@/components/project-page/view-toggle";
 import { Toolbar } from "@/components/toolbar/toolbar";
-import {
-  useGetProject,
-  useGetSharedProject,
-  useGetProjectResults,
-  useGetSocket,
-  
-} from "@/lib/queries/projects";
-import { ProjectProvider } from "@/providers/project-provider";
-import { use, useEffect, useLayoutEffect, useState } from "react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
@@ -29,12 +20,19 @@ import {
   useProcessProject,
 } from "@/lib/mutations/projects";
 import { ProjectImage } from "@/lib/projects";
+import {
+  useGetProject,
+  useGetProjectResults,
+  useGetSharedProject,
+  useGetSocket,
+} from "@/lib/queries/projects";
+import { ProjectProvider } from "@/providers/project-provider";
 import { useSession } from "@/providers/session-provider";
 import { Transition } from "@headlessui/react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Download, LoaderCircle, OctagonAlert, Play, X } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-
+import { use, useEffect, useLayoutEffect, useState } from "react";
 
 export default function Project({
   params,
@@ -46,15 +44,11 @@ export default function Project({
   const { pid } = resolvedParams;
   const searchParams = useSearchParams();
   const tokenProject = searchParams.get("token") ?? "";
-  
-  const projectIsShared = tokenProject.length>0;
-  const project = projectIsShared ? useGetSharedProject(tokenProject, pid, session.token ): useGetProject(
-    session?.user?._id,
-    pid,
-    session?.token
-  );
 
-
+  const projectIsShared = tokenProject.length > 0;
+  const project = projectIsShared
+    ? useGetSharedProject(tokenProject, pid, session.token)
+    : useGetProject(session?.user?._id, pid, session?.token);
 
   const downloadProjectImages = useDownloadProject();
   const processProject = useProcessProject();
@@ -75,20 +69,20 @@ export default function Project({
   const [waitingForPreview, setWaitingForPreview] = useState<string>("");
   const [showCancel, setShowCancel] = useState<boolean>(false);
 
-
-  //   ALTERAR LÓGICA PARA NOVO FLUXO 
-  // const isReadOnly = searchParams.get("auth") === "view"; 
-
-  const totalProcessingSteps = (project.data?.tools.length ?? 0) * (project.data?.imgs.length ?? 0);
+  const totalProcessingSteps =
+    (project.data?.tools.length ?? 0) * (project.data?.imgs.length ?? 0);
   const projectResults = useGetProjectResults(
-    session?.user?._id ?? "", 
-    pid, 
+    session?.user?._id ?? "",
+    pid,
     session?.token ?? ""
   );
   const qc = useQueryClient();
 
   useLayoutEffect(() => {
-    if (!["edit", "results"].includes(mode) || !["grid", "carousel"].includes(view)) {
+    if (
+      !["edit", "results"].includes(mode) ||
+      !["grid", "carousel"].includes(view)
+    ) {
       router.replace(path);
     }
   }, [mode, view, path, router, projectResults.data]);
@@ -111,7 +105,9 @@ export default function Project({
             if (!isMobile) sidebar.setOpen(true);
             setProcessingProgress(0);
             setProcessingSteps(1);
-            router.push("?mode=results&view=grid");
+            tokenProject
+              ? router.push(`?token=${tokenProject}&mode=results&view=grid`)
+              : router.push(`?mode=results&view=grid`);
           });
         }, 2000);
       }
@@ -128,7 +124,19 @@ export default function Project({
       active = false;
       if (socket.data) socket.data.off("process-update", onProcessUpdate);
     };
-  }, [pid, processingSteps, qc, router, session?.token, session?.user?._id, socket.data, totalProcessingSteps, sidebar, isMobile, projectResults]);
+  }, [
+    pid,
+    processingSteps,
+    qc,
+    router,
+    session?.token,
+    session?.user?._id,
+    socket.data,
+    totalProcessingSteps,
+    sidebar,
+    isMobile,
+    projectResults,
+  ]);
 
   useEffect(() => {
     let timer: NodeJS.Timeout;
@@ -158,11 +166,17 @@ export default function Project({
       </div>
     );
 
-  if (project.isLoading || !project.data || projectResults.isLoading || !projectResults.data) return (
-    <div className="flex justify-center items-center h-screen">
-      <Loading />
-    </div>
-  );
+  if (
+    project.isLoading ||
+    !project.data ||
+    projectResults.isLoading ||
+    !projectResults.data
+  )
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <Loading />
+      </div>
+    );
 
   return (
     <ProjectProvider
@@ -174,7 +188,9 @@ export default function Project({
         {/* Header */}
         <div className="flex flex-col xl:flex-row justify-center items-start xl:items-center xl:justify-between border-b border-sidebar-border py-2 px-2 md:px-3 xl:px-4 h-fit gap-2">
           <div className="flex items-center justify-between w-full xl:w-auto gap-2">
-            <h1 className="text-lg font-semibold truncate">{project.data.name}</h1>
+            <h1 className="text-lg font-semibold truncate">
+              {project.data.name}
+            </h1>
             <div className="flex items-center gap-2 xl:hidden">
               <ViewToggle />
               <ModeToggle />
@@ -188,7 +204,11 @@ export default function Project({
                 <>
                   <Button
                     // RF45: Bloqueia o botão Apply se for apenas leitura OU sem sessão (requer backend)
-                    disabled={project.data.tools.length <= 0 || waitingForPreview !== "" || !session}
+                    disabled={
+                      project.data.tools.length <= 0 ||
+                      waitingForPreview !== "" ||
+                      !session
+                    }
                     className="inline-flex"
                     onClick={() => {
                       processProject.start.mutate(
@@ -215,7 +235,7 @@ export default function Project({
                   >
                     <Play /> Apply
                   </Button>
-                 
+
                   <AddImagesDialog />
                 </>
               )}
@@ -245,16 +265,18 @@ export default function Project({
                   );
                 }}
               >
-                {(mode === "edit" ? downloadProjectImages : downloadProjectResults).isPending ? (
+                {(mode === "edit"
+                  ? downloadProjectImages
+                  : downloadProjectResults
+                ).isPending ? (
                   <LoaderCircle className="animate-spin" />
                 ) : (
                   <Download />
                 )}
               </Button>
 
-              
-              {session && !projectIsShared &&(
-                <ShareProjectDialog 
+              {session && !projectIsShared && (
+                <ShareProjectDialog
                   projectId={pid}
                   userId={session.user._id}
                   currentPath={path}
@@ -271,9 +293,11 @@ export default function Project({
 
         {/* Main Content */}
         <div className="h-full overflow-x-hidden flex">
-         
           {mode !== "results" && <Toolbar />}
-          <ProjectImageList setCurrentImageId={setCurrentImage} results={projectResults.data} />
+          <ProjectImageList
+            setCurrentImageId={setCurrentImage}
+            results={projectResults.data}
+          />
         </div>
       </div>
 

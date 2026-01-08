@@ -166,7 +166,9 @@ export function ProjectImageList({
                         className="aspect-square"
                         onClick={() => {
                           setJumpTo(index);
-                          router.push(`?token=${tokenProject}&mode=${mode}&view=carousel`);
+                          router.push(
+                            `?token=${tokenProject}&mode=${mode}&view=carousel`
+                          );
                           qc.invalidateQueries({
                             queryKey: ["socket"],
                             refetchType: "all",
@@ -188,7 +190,9 @@ export function ProjectImageList({
                               ? results.imgs.length
                               : project.imgs.length) + index
                           );
-                          router.push(`?mode=${mode}&view=carousel`);
+                          router.push(
+                            `?token=${tokenProject}&mode=${mode}&view=carousel`
+                          );
                           qc.invalidateQueries({
                             queryKey: ["socket"],
                             refetchType: "all",

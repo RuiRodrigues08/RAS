@@ -46,11 +46,34 @@ router.post(
  */
 router.get("/share/:token/:project", function (req, res, next) {
   axios
-    .get(projectsURL + `share/${req.params.token}/${req.params.project}`,{
+    .get(projectsURL + `share/${req.params.token}/${req.params.project}`, {
       httpsAgent: httpsAgent,
     })
     .then((resp) => res.status(200).jsonp(resp.data))
-    .catch((err) => res.status(500).jsonp("Error getting shared project"));
+    .catch((err) => res.status(500).jsonp(err?.response?.data));
+});
+
+/**
+ * Get all share links for a user
+ * @body Empty
+ * @returns List of share links
+ */
+router.get("/share/:user", auth.checkToken, function (req, res, next) {
+  axios
+    .get(projectsURL + `share/${req.params.user}`, {
+      httpsAgent: httpsAgent,
+    })
+    .then((resp) => res.status(200).jsonp(resp.data))
+    .catch((err) => res.status(err?.status).jsonp(err?.response?.data));
+});
+
+router.patch("/share/:user", auth.checkToken, function (req, res, next) {
+  axios
+    .patch(projectsURL + `share/${req.params.user}`, req.body, {
+      httpsAgent: httpsAgent,
+    })
+    .then((resp) => res.status(200).jsonp(resp.data))
+    .catch((err) => res.status(err?.status).jsonp(err?.response?.data));
 });
 
 module.exports = router;

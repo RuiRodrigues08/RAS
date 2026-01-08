@@ -12,13 +12,13 @@ module.exports.generateLink = async (projectId, permission) => {
   // Verify project exists
   const project = await Project.findOne({ _id: projectId }).exec();
   if (!project) {
-    throw new Error('Project not found');
+    throw new Error("Project not found");
   }
 
   // Generate unique token
   let token = generateRandomToken();
   let exists = await ShareLink.findOne({ token: token }).exec();
-  
+
   // Ensure token is unique
   while (exists) {
     token = generateRandomToken();
@@ -44,16 +44,16 @@ module.exports.generateLink = async (projectId, permission) => {
  */
 module.exports.validateLink = async (token, projectReal) => {
   const shareLink = await ShareLink.findOne({ token: token }).exec();
-  
+
   if (!shareLink) {
     return null;
   }
 
-  if(shareLink.projectId.toString() !== projectReal){
+  if (shareLink.projectId.toString() !== projectReal) {
     return null;
-  } 
+  }
   const project = await Project.findOne({ _id: shareLink.projectId }).exec();
-  
+
   if (!project) {
     return null;
   }
@@ -68,3 +68,62 @@ module.exports.validateLink = async (token, projectReal) => {
   };
 };
 
+module.exports.getAllUserLinks = async (uid) => {
+  const projects = await Project.find().where({ user_id: uid }).exec();
+
+  if (projects.length === 0) {
+    return [];
+  }
+
+  const links = await ShareLink.find()
+    .where({ projectId: { $in: projects.map((p) => p._id) } })
+    .exec();
+
+  if (links.length === 0) {
+    return [];
+  }
+
+  const map = links.map((l) => {
+    return {
+      link: l,
+      project: projects.find((p) => p._id.equals(l.projectId)),
+    };
+  });
+
+  return map;
+};
+
+module.exports.editPermission = async (token, permission, user) => {
+  try {
+    const shareLink = await ShareLink.findOne({ token: token }).exec();
+
+    if (!shareLink) {
+      return null;
+    }
+
+    const project = await Project.findOne({ _id: shareLink.projectId }).exec();
+
+    if (!project) {
+      return null;
+    }
+
+    if (project.user_id.toString() !== user) {
+      const error = new Error(
+        "You don't have permission to edit this share link"
+      );
+      error.status = 403;
+      throw error;
+    }
+
+    if (shareLink.permission === permission) {
+      return { modifiedCount: 0 };
+    }
+
+    return await ShareLink.updateOne(
+      { _id: shareLink._id },
+      { $set: { permission: permission } }
+    ).exec();
+  } catch (err) {
+    throw err;
+  }
+};

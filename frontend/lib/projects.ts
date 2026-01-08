@@ -1,9 +1,9 @@
-import axios from "axios";
+import { useQuery } from "@tanstack/react-query";
+import axios, { isAxiosError } from "axios";
 import JSZip from "jszip";
+import { io } from "socket.io-client";
 import { api } from "./axios";
 import { ToolNames, ToolParams } from "./tool-types";
-import { useQuery } from "@tanstack/react-query";
-import { io } from "socket.io-client";
 
 export interface Project {
   _id: string;
@@ -85,17 +85,23 @@ export const fetchProject = async (uid: string, pid: string, token: string) => {
   } as SingleProject;
 };
 
-export const fetchSharedProject = async (tokenproj: string, pid:string, token?: string ) => {
+export const fetchSharedProject = async (
+  tokenproj: string,
+  pid: string,
+  token?: string
+) => {
   const headers: Record<string, string> = {};
-  
-  
+
   if (token) {
     headers.Authorization = `Bearer ${token}`;
   }
 
-  const response = await api.get<SingleProject>(`/projects/share/${tokenproj}/${pid}`,{
-    headers,
-  });
+  const response = await api.get<SingleProject>(
+    `/projects/share/${tokenproj}/${pid}`,
+    {
+      headers,
+    }
+  );
 
   if (response.status !== 200 || !response.data)
     throw new Error("Failed to fetch shared project");
@@ -110,31 +116,69 @@ export const fetchSharedProject = async (tokenproj: string, pid:string, token?: 
   } as SingleProject;
 };
 
-export const getSharedProjectImages = async (tokenproj: string, pid: string, token: string) => {
- 
-  const response = await api.get(`/projects/share/${tokenproj}/${pid}/images`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  return response.data;
+export const fetchSharedLinks = async (uid: string, token: string) => {
+  try {
+    const response = await api.get(`/projects/share/${uid}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    return response.data;
+  } catch (e) {
+    if (isAxiosError(e)) {
+      if (e.response?.status === 404) return [];
+      throw new Error(e.response?.data);
+    }
+    throw e;
+  }
 };
 
+export const editShareLink = async ({
+  tokenProj,
+  token,
+  permission,
+  uid,
+}: {
+  tokenProj: string;
+  token: string;
+  permission: "VIEWER" | "EDITOR";
+  uid: string;
+}) => {
+  try {
+    await api.patch(
+      `/projects/share/${uid}`,
+      { permission: permission, token: tokenProj },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+  } catch (e) {
+    if (isAxiosError(e)) {
+      if (e.response?.status === 404) return [];
+      throw new Error(e.response?.data);
+    }
+    throw e;
+  }
+};
 
 export const useGetSocket = (token: string) => {
   return useQuery({
     queryKey: ["socket", token],
     queryFn: () =>
       io("http://localhost:8080", {
-        path: "/socket.io", 
+        path: "/socket.io",
         auth: {
           token: token,
         },
-        transports: ["websocket"], 
+        transports: ["websocket"],
       }),
     refetchOnWindowFocus: false,
     refetchOnMount: false,
   });
 };
-
 
 export const addProject = async ({
   uid,

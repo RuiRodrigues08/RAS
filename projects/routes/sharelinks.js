@@ -7,37 +7,20 @@ const ShareLink = require("../controllers/sharelink");
 
 const { get_image_host } = require("../utils/minio");
 
-router.post("/:user/:project/share", (req, res, next) => {
-  const { permission } = req.body;
-  
-  // Validate permission
-  if (!permission || !['VIEWER', 'EDITOR'].includes(permission)) {
-    return res.status(400).jsonp('Invalid permission. Must be VIEWER or EDITOR');
-  }
-
-  
-  Project.getOne(req.params.user, req.params.project)
-    .then((project) => {
-      if (!project) {
-        return res.status(404).jsonp('Project not found');
+router.get("/share/:user", (req, res, next) => {
+  ShareLink.getAllUserLinks(req.params.user)
+    .then((result) => {
+      if (!result || result.length === 0) {
+        console.log("Share link not found or expired");
+        return res.status(404).jsonp("Share link not found or expired");
       }
 
-      // Generate share link 
-      ShareLink.generateLink(req.params.project, permission)
-        .then((shareLink) => {
-          res.status(201).jsonp({
-            token: shareLink.token,
-            permission: shareLink.permission,
-            createdAt: shareLink.createdAt,
-            url: `/dashboard/${req.params.project}?token=${shareLink.token}`,
-          });
-        })
-        .catch((err) => {
-          console.error(err);
-          res.status(500).jsonp('Error creating share link');
-        });
+      res.status(200).jsonp(result);
     })
-    .catch((_) => res.status(500).jsonp('Error validating project'));
+    .catch((err) => {
+      console.log(err);
+      res.status(500).jsonp(err?.message);
+    });
 });
 
 // Get project by share token
@@ -45,7 +28,7 @@ router.get("/share/:token/:project", (req, res, next) => {
   ShareLink.validateLink(req.params.token, req.params.project)
     .then(async (result) => {
       if (!result) {
-        return res.status(404).jsonp('Share link not found or expired');
+        return res.status(404).jsonp("Share link not found or expired");
       }
 
       const { shareLink, project } = result;
@@ -76,7 +59,7 @@ router.get("/share/:token/:project", (req, res, next) => {
             url: url,
           });
         } catch (err) {
-          console.error('Error getting image URL:', err.message);
+          console.error("Error getting image URL:", err.message);
           res.status(404).jsonp(`Error acquiring image's url`);
           return;
         }
@@ -86,11 +69,66 @@ router.get("/share/:token/:project", (req, res, next) => {
     })
     .catch((err) => {
       console.error(err);
-      res.status(500).jsonp('Error validating share link');
+      res.status(500).jsonp("Error validating share link");
     });
 });
 
+router.post("/:user/:project/share", (req, res, next) => {
+  const { permission } = req.body;
 
+  // Validate permission
+  if (!permission || !["VIEWER", "EDITOR"].includes(permission)) {
+    return res
+      .status(400)
+      .jsonp("Invalid permission. Must be VIEWER or EDITOR");
+  }
+
+  Project.getOne(req.params.user, req.params.project)
+    .then((project) => {
+      if (!project) {
+        return res.status(404).jsonp("Project not found");
+      }
+
+      // Generate share link
+      ShareLink.generateLink(req.params.project, permission)
+        .then((shareLink) => {
+          res.status(201).jsonp({
+            token: shareLink.token,
+            permission: shareLink.permission,
+            createdAt: shareLink.createdAt,
+            url: `/dashboard/${req.params.project}?token=${shareLink.token}`,
+          });
+        })
+        .catch((err) => {
+          console.error(err);
+          res.status(500).jsonp("Error creating share link");
+        });
+    })
+    .catch((_) => res.status(500).jsonp("Error validating project"));
+});
+
+router.patch("/share/:user", (req, res, next) => {
+  if (
+    !req.body.permission ||
+    !["VIEWER", "EDITOR"].includes(req.body.permission)
+  ) {
+    return res
+      .status(400)
+      .jsonp("Invalid permission. Must be VIEWER or EDITOR");
+  }
+
+  ShareLink.editPermission(req.body.token, req.body.permission, req.params.user)
+    .then((result) => {
+      if (!result) {
+        return res.status(404).jsonp("Share link not found or expired");
+      }
+      res.status(200).jsonp("Share link permission updated");
+    })
+    .catch((err) =>
+      res
+        .status(err?.status || 500)
+        .jsonp(err?.message || "Error updating share link")
+    );
+});
 
 module.exports = router;
-
