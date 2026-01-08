@@ -1,22 +1,9 @@
-import { useSearchParams } from "next/navigation";
-import BrightnessTool from "./brightness-tool";
-import ContrastTool from "./contrast-tool";
-import CropTool from "./crop-tool";
-import ResizeTool from "./resize-tool";
-import RotateTool from "./rotate-tool";
-import SaturationTool from "./saturation-tool";
-import BorderTool from "./border-tool";
-import BinarizationTool from "./binarization-tool";
-import WatermarkTool from "./watermark-tool";
-import CropAITool from "./ai-crop-tool";
-import BgRemovalAITool from "./ai-bg-removal";
-import ObjectAITool from "./object-ai-tool";
-import PeopleAITool from "./people-ai-tool";
-import TextAITool from "./text-ai-tool";
-import UpgradeAITool from "./upgrade-ai-tool";
 import { useClearProjectTools } from "@/lib/mutations/projects";
-import { useSession } from "@/providers/session-provider";
 import { useProjectInfo } from "@/providers/project-provider";
+import { useSession } from "@/providers/session-provider";
+import { Eraser } from "lucide-react";
+import { useSearchParams } from "next/navigation";
+import { useState } from "react";
 import { Button } from "../ui/button";
 import {
   Dialog,
@@ -27,22 +14,37 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "../ui/dialog";
-import { Eraser } from "lucide-react";
-import { useState } from "react";
+import BgRemovalAITool from "./ai-bg-removal";
+import CropAITool from "./ai-crop-tool";
+import BinarizationTool from "./binarization-tool";
+import BorderTool from "./border-tool";
+import BrightnessTool from "./brightness-tool";
+import ContrastTool from "./contrast-tool";
+import CropTool from "./crop-tool";
+import ObjectAITool from "./object-ai-tool";
+import PeopleAITool from "./people-ai-tool";
+import ResizeTool from "./resize-tool";
+import RotateTool from "./rotate-tool";
+import SaturationTool from "./saturation-tool";
+import TextAITool from "./text-ai-tool";
+import UpgradeAITool from "./upgrade-ai-tool";
+import WatermarkTool from "./watermark-tool";
 
 export function Toolbar() {
   const searchParams = useSearchParams();
   const view = searchParams.get("view") ?? "grid";
-  const disabled = view === "grid";
+  const authParam = searchParams.get("auth");
   const project = useProjectInfo();
   const session = useSession();
-
   const [open, setOpen] = useState<boolean>(false);
 
+  // Disable if grid view OR if auth=view (read-only)
+  const disabled = view === "grid" || project.permission === "VIEWER";
+
   const clearTools = useClearProjectTools(
-    session.user._id,
+    session?.user?._id ?? "",
     project._id,
-    session.token,
+    session?.token ?? ""
   );
 
   return (
@@ -85,7 +87,9 @@ export function Toolbar() {
           <DialogFooter>
             <Button
               variant="destructive"
+              disabled={!session}
               onClick={() => {
+                if (!session) return;
                 clearTools.mutate({
                   uid: session.user._id,
                   pid: project._id,

@@ -1,7 +1,5 @@
 "use client";
 
-import * as React from "react";
-import { ArrowLeft, BadgeCheck, CreditCard, Sparkles } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -12,15 +10,27 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
+import { useSession } from "@/providers/session-provider";
+import {
+  ArrowLeft,
+  BadgeCheck,
+  CreditCard,
+  Share2,
+  Sparkles,
+} from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useSession } from "@/providers/session-provider";
 
 const pages = [
   {
     name: "Account",
     icon: BadgeCheck,
     path: "/account",
+  },
+  {
+    name: "Share Links",
+    icon: Share2,
+    path: "/account/share-links",
   },
   {
     name: "Billing",

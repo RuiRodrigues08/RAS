@@ -1,13 +1,14 @@
 "use client";
 
-import { Pencil, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Eye, Pencil } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 export function ModeToggle() {
   const searchParams = useSearchParams();
   const view = searchParams.get("view") ?? "grid";
   const mode = searchParams.get("mode") ?? "edit";
+  const tokenProject = searchParams.get("token") ?? "";
   const router = useRouter();
 
   return (
@@ -15,7 +16,9 @@ export function ModeToggle() {
       <Button
         variant={mode === "edit" ? "default" : "secondary"}
         size="icon"
-        onClick={() => router.push(`?mode=edit&view=${view}`)}
+        onClick={() =>
+          router.push(`?token=${tokenProject}&mode=edit&view=${view}`)
+        }
         aria-label="Edit mode"
         aria-pressed={view === "grid"}
         className="size-8"
@@ -26,7 +29,9 @@ export function ModeToggle() {
       <Button
         variant={mode === "results" ? "default" : "secondary"}
         size="icon"
-        onClick={() => router.push(`?mode=results&view=${view}`)}
+        onClick={() =>
+          router.push(`?token=${tokenProject}&mode=results&view=${view}`)
+        }
         aria-label="Results mode"
         aria-pressed={view === "carousel"}
         className="size-8"

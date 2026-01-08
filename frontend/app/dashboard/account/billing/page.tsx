@@ -57,7 +57,7 @@ import validator from "validator";
 
 export default function Billing() {
   const session = useSession();
-  const isFreePlan = session.user.type === "free";
+  const isFreePlan = session?.user?.type === "free";
   const [billingCycle, setBillingCycle] = useState<string>("");
   const [showSaveChanges, setShowSaveChanges] = useState<boolean>(false);
   const [currentBillingCycle, setCurrentBillingCycle] = useState<string>("");
@@ -68,18 +68,18 @@ export default function Billing() {
   const [error, setError] = useState<string | null>(null);
   const [showError, setShowError] = useState<boolean>(false);
   const [isOpen, setIsOpen] = useState<boolean>(false);
-  const subscription = useGetSubscription(session.user._id);
-  const card = useGetCard(session.user._id);
+  const subscription = useGetSubscription(session?.user?._id || "");
+  const card = useGetCard(session?.user?._id || "");
   const cancelSubscription = useCancelSubscription();
   const updateSubscription = useUpdateSubscription();
   const updateCard = useUpdateCard();
   const { toast } = useToast();
 
   useLayoutEffect(() => {
-    if (session.user.type === "anonymous") {
+    if (session?.user?.type === "anonymous") {
       redirect("/login", RedirectType.replace);
     }
-  }, [session.user.type]);
+  }, [session?.user?.type]);
 
   useEffect(() => {
     // Set billingCycle and currentBillingCycle based on subscription data
@@ -102,6 +102,7 @@ export default function Billing() {
   }, [billingCycle, currentBillingCycle]);
 
   function handleSaveChanges() {
+    if (!session?.user?._id) return;
     updateSubscription.mutate(
       {
         user_id: session.user._id,
@@ -168,6 +169,7 @@ export default function Billing() {
   }, [cardNumber, expirationDate, cvc, cardholderName]);
 
   function handleCancelSubscription() {
+    if (!session?.user?._id) return;
     cancelSubscription.mutate(session.user._id, {
       onSuccess: () => {
         toast({
@@ -191,6 +193,7 @@ export default function Billing() {
     setShowError(true);
     if (error) return;
 
+    if (!session?.user?._id) return;
     const [month, year] = expirationDate.split("/");
     updateCard.mutate(
       {
@@ -234,7 +237,7 @@ export default function Billing() {
     }
   }, [isOpen]);
 
-  if (session.user.type !== "anonymous")
+  if (session?.user?.type !== "anonymous")
     return (
       <div className="max-w-4xl space-y-4 sm:space-y-8">
         {/* Current Plan Card */}

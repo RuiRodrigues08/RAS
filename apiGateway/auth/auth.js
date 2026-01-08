@@ -35,3 +35,49 @@ module.exports.checkToken = (req, res, next) => {
     }
   });
 };
+
+// Optional authentication - allows requests with or without token
+// If token is provided and valid, req.user will be set
+// If no token or invalid token, request continues without user info
+module.exports.optionalToken = (req, res, next) => {
+  const authHeader = req.headers["authorization"];
+  
+  // No token provided - continue without authentication
+  if (!authHeader || !authHeader.includes("Bearer ")) {
+    req.user = null;
+    return next();
+  }
+
+  const token = authHeader.split(" ")[1];
+
+  // Token provided - try to verify it
+  jwt.verify(token, process.env.JWT_SECRET_KEY, (e, payload) => {
+    if (e) {
+      // Invalid token - continue without authentication
+      req.user = null;
+      return next();
+    }
+
+    try {
+      const user = payload;
+      const exp = user.exp;
+
+      if (Date.now() >= exp * 1000) {
+        // Expired token - continue without authentication
+        req.user = null;
+        return next();
+      }
+
+      // Valid token - set user info
+      req.user = {
+        id: user.id,
+        email: user.email,
+      };
+      next();
+    } catch (_) {
+      // Invalid token format - continue without authentication
+      req.user = null;
+      next();
+    }
+  });
+};

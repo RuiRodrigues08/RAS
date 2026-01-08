@@ -39,6 +39,7 @@ export function ProjectImageList({
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const tokenProject = searchParams.get("token") ?? "";
   const view = searchParams.get("view") ?? "grid";
   const mode = searchParams.get("mode") ?? "edit";
 
@@ -165,7 +166,9 @@ export function ProjectImageList({
                         className="aspect-square"
                         onClick={() => {
                           setJumpTo(index);
-                          router.push(`?mode=${mode}&view=carousel`);
+                          router.push(
+                            `?token=${tokenProject}&mode=${mode}&view=carousel`
+                          );
                           qc.invalidateQueries({
                             queryKey: ["socket"],
                             refetchType: "all",
@@ -187,7 +190,9 @@ export function ProjectImageList({
                               ? results.imgs.length
                               : project.imgs.length) + index
                           );
-                          router.push(`?mode=${mode}&view=carousel`);
+                          router.push(
+                            `?token=${tokenProject}&mode=${mode}&view=carousel`
+                          );
                           qc.invalidateQueries({
                             queryKey: ["socket"],
                             refetchType: "all",

@@ -4,6 +4,7 @@ import Loading from "@/components/loading";
 import { AddImagesDialog } from "@/components/project-page/add-images-dialog";
 import { ModeToggle } from "@/components/project-page/mode-toggle";
 import { ProjectImageList } from "@/components/project-page/project-image-list";
+import { ShareProjectDialog } from "@/components/project-page/share-project-dialog";
 import { ViewToggle } from "@/components/project-page/view-toggle";
 import { Toolbar } from "@/components/toolbar/toolbar";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -22,6 +23,7 @@ import { ProjectImage } from "@/lib/projects";
 import {
   useGetProject,
   useGetProjectResults,
+  useGetSharedProject,
   useGetSocket,
 } from "@/lib/queries/projects";
 import { ProjectProvider } from "@/providers/project-provider";
@@ -40,19 +42,26 @@ export default function Project({
   const resolvedParams = use(params);
   const session = useSession();
   const { pid } = resolvedParams;
-  const project = useGetProject(session.user._id, pid, session.token);
+  const searchParams = useSearchParams();
+  const tokenProject = searchParams.get("token") ?? "";
+
+  const projectIsShared = tokenProject.length > 0;
+  const project = projectIsShared
+    ? useGetSharedProject(tokenProject, pid, session.token)
+    : useGetProject(session?.user?._id, pid, session?.token);
+
   const downloadProjectImages = useDownloadProject();
   const processProject = useProcessProject();
   const downloadProjectResults = useDownloadProjectResults();
   const { toast } = useToast();
-  const socket = useGetSocket(session.token);
-  const searchParams = useSearchParams();
+  const socket = useGetSocket(session?.token ?? "");
   const view = searchParams.get("view") ?? "grid";
   const mode = searchParams.get("mode") ?? "edit";
   const router = useRouter();
   const path = usePathname();
   const sidebar = useSidebar();
   const isMobile = useIsMobile();
+
   const [currentImage, setCurrentImage] = useState<ProjectImage | null>(null);
   const [processing, setProcessing] = useState<boolean>(false);
   const [processingProgress, setProcessingProgress] = useState<number>(0);
@@ -63,9 +72,9 @@ export default function Project({
   const totalProcessingSteps =
     (project.data?.tools.length ?? 0) * (project.data?.imgs.length ?? 0);
   const projectResults = useGetProjectResults(
-    session.user._id,
+    session?.user?._id ?? "",
     pid,
-    session.token
+    session?.token ?? ""
   );
   const qc = useQueryClient();
 
@@ -88,6 +97,7 @@ export default function Project({
       );
 
       setProcessingProgress(progress);
+
       if (processingSteps >= totalProcessingSteps) {
         setTimeout(() => {
           projectResults.refetch().then(() => {
@@ -95,14 +105,15 @@ export default function Project({
             if (!isMobile) sidebar.setOpen(true);
             setProcessingProgress(0);
             setProcessingSteps(1);
-            router.push("?mode=results&view=grid");
+            tokenProject
+              ? router.push(`?token=${tokenProject}&mode=results&view=grid`)
+              : router.push(`?mode=results&view=grid`);
           });
         }, 2000);
       }
     }
 
     let active = true;
-
     if (active && socket.data) {
       socket.data.on("process-update", () => {
         if (active) onProcessUpdate();
@@ -118,8 +129,8 @@ export default function Project({
     processingSteps,
     qc,
     router,
-    session.token,
-    session.user._id,
+    session?.token,
+    session?.user?._id,
     socket.data,
     totalProcessingSteps,
     sidebar,
@@ -185,14 +196,18 @@ export default function Project({
               <ModeToggle />
             </div>
           </div>
+
           <div className="flex items-center justify-between w-full xl:w-auto gap-2">
             <SidebarTrigger variant="outline" className="h-9 w-10 lg:hidden" />
             <div className="flex items-center gap-2 flex-wrap justify-end xl:justify-normal w-full xl:w-auto">
               {mode !== "results" && (
                 <>
                   <Button
+                    // RF45: Bloqueia o botão Apply se for apenas leitura OU sem sessão (requer backend)
                     disabled={
-                      project.data.tools.length <= 0 || waitingForPreview !== ""
+                      project.data.tools.length <= 0 ||
+                      waitingForPreview !== "" ||
+                      !session
                     }
                     className="inline-flex"
                     onClick={() => {
@@ -220,13 +235,15 @@ export default function Project({
                   >
                     <Play /> Apply
                   </Button>
+
                   <AddImagesDialog />
                 </>
               )}
+
               <Button
                 variant="outline"
                 className="px-3"
-                title="Download project"
+                disabled={!session}
                 onClick={() => {
                   (mode === "edit"
                     ? downloadProjectImages
@@ -257,6 +274,15 @@ export default function Project({
                   <Download />
                 )}
               </Button>
+
+              {session && !projectIsShared && (
+                <ShareProjectDialog
+                  projectId={pid}
+                  userId={session.user._id}
+                  currentPath={path}
+                />
+              )}
+
               <div className="hidden xl:flex items-center gap-2">
                 <ViewToggle />
                 <ModeToggle />
@@ -264,6 +290,7 @@ export default function Project({
             </div>
           </div>
         </div>
+
         {/* Main Content */}
         <div className="h-full overflow-x-hidden flex">
           {mode !== "results" && <Toolbar />}
@@ -273,6 +300,8 @@ export default function Project({
           />
         </div>
       </div>
+
+      {/* Processing Overlay */}
       <Transition
         show={processing}
         enter="transition-opacity ease-in duration-300"
