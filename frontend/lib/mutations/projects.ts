@@ -20,6 +20,8 @@ import {
 } from "../projects";
 import { createBlobUrlFromFile, downloadBlob } from "../utils";
 
+
+
 export const useAddProject = (uid: string, token: string) => {
   const qc = useQueryClient();
   return useMutation({
@@ -78,20 +80,22 @@ export const useUpdateProject = (uid: string, pid: string, token: string) => {
 export const useAddProjectImages = (
   uid: string,
   pid: string,
-  token: string
+  token: string,
 ) => {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: addProjectImages,
-    onSuccess: () => {
-      qc.invalidateQueries({
-        refetchType: "all",
-        queryKey: ["project", uid, pid, token],
-      });
-      qc.invalidateQueries({
-        refetchType: "all",
-        queryKey: ["projectImages", uid, pid, token],
-      });
+    mutationFn: addProjectImages, 
+    onSuccess: (_, variables) => { 
+      
+      
+      qc.invalidateQueries({ queryKey: ["project", uid, pid, token] });
+      qc.invalidateQueries({ queryKey: ["projectImages", uid, pid, token] });
+
+    
+      if (variables.tokenProject) {
+         qc.invalidateQueries({ queryKey: ["sharedProject"] }); 
+        
+      }
     },
   });
 };
@@ -162,7 +166,7 @@ export const useProcessProject = () => {
   return { start, cancel };
 };
 
-export const useAddProjectTool = (uid: string, pid: string, token: string) => {
+export const useAddProjectTool = (uid: string, pid: string, token: string, tokenProject?: string) => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: addProjectTool,
@@ -177,8 +181,8 @@ export const useAddProjectTool = (uid: string, pid: string, token: string) => {
       });
       qc.invalidateQueries({
         refetchType: "all",
-        queryKey: ["sharedProject"],
-      });
+        queryKey: ["sharedProject", pid],
+      })
     },
   });
 };
@@ -241,10 +245,6 @@ export const useClearProjectTools = (
       qc.invalidateQueries({
         refetchType: "all",
         queryKey: ["projectResults", uid, pid, token],
-      });
-      qc.invalidateQueries({
-        refetchType: "all",
-        queryKey: ["sharedProject"],
       });
     },
   });

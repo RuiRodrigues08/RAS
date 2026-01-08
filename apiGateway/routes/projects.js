@@ -174,36 +174,40 @@ router.post(
   }
 );
 
+
 /**
  * Add image to project
  */
 router.post(
   "/:user/:project/img",
-  upload.single("image"),
-  auth.checkToken,
+  auth.checkProjectTokenOrUser, 
+  upload.single("image"),      
   function (req, res, next) {
+    if (!req.file) return res.status(400).jsonp("No image file provided");
+
+    
     const data = new FormData();
     data.append("image", req.file.buffer, {
       filename: req.file.originalname,
       contentType: req.file.mimetype,
     });
 
-    // Mantive a tua config de content-type, mas injetei os headers de auth
+    // 2. Encaminhar para o MS Projetos seguindo o padrão das Tools
     axios
       .post(
         projectsURL + `${req.params.user}/${req.params.project}/img`,
         data,
-        getAxiosConfig(req, {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-        })
+        // getAxiosConfig garante que o 'Authorization' e o 'x-project-token' são passados
+        getAxiosConfig(req, { headers: data.getHeaders() }) 
       )
-      .then((resp) => res.sendStatus(201))
-      .catch((err) => res.status(500).jsonp("Error adding image to project"));
+      .then((resp) => res.status(201).jsonp(resp.data))
+      .catch((err) => {
+        // Reporta o erro real vindo do Microserviço
+        const statusCode = err.response?.status || 500;
+        res.status(statusCode).jsonp(err.response?.data || "Error forwarding image");
+      });
   }
 );
-
 /**
  * Add tool to project
  */

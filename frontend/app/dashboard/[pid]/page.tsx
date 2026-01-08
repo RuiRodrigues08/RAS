@@ -4,11 +4,20 @@ import Loading from "@/components/loading";
 import { AddImagesDialog } from "@/components/project-page/add-images-dialog";
 import { ModeToggle } from "@/components/project-page/mode-toggle";
 import { ProjectImageList } from "@/components/project-page/project-image-list";
-import { ShareProjectDialog } from "@/components/project-page/share-project-dialog";
 import { ViewToggle } from "@/components/project-page/view-toggle";
-import { Toolbar } from "@/components/toolbar/toolbar";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { ShareProjectDialog } from "@/components/project-page/share-project-dialog";
 import { Button } from "@/components/ui/button";
+import { Toolbar } from "@/components/toolbar/toolbar";
+import {
+  useGetProject,
+  useGetSharedProject,
+  useGetProjectResults,
+  useGetSocket,
+  
+} from "@/lib/queries/projects";
+import { ProjectProvider } from "@/providers/project-provider";
+import { use, useEffect, useLayoutEffect, useState } from "react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
@@ -20,19 +29,12 @@ import {
   useProcessProject,
 } from "@/lib/mutations/projects";
 import { ProjectImage } from "@/lib/projects";
-import {
-  useGetProject,
-  useGetProjectResults,
-  useGetSharedProject,
-  useGetSocket,
-} from "@/lib/queries/projects";
-import { ProjectProvider } from "@/providers/project-provider";
 import { useSession } from "@/providers/session-provider";
 import { Transition } from "@headlessui/react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Download, LoaderCircle, OctagonAlert, Play, X } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { use, useEffect, useLayoutEffect, useState } from "react";
+
 
 export default function Project({
   params,
@@ -44,11 +46,15 @@ export default function Project({
   const { pid } = resolvedParams;
   const searchParams = useSearchParams();
   const tokenProject = searchParams.get("token") ?? "";
+  
+  const projectIsShared = tokenProject.length>0;
+  const project = projectIsShared ? useGetSharedProject(tokenProject, pid, session.token ): useGetProject(
+    session?.user?._id,
+    pid,
+    session?.token
+  );
 
-  const projectIsShared = tokenProject.length > 0;
-  const project = projectIsShared
-    ? useGetSharedProject(tokenProject, pid, session.token)
-    : useGetProject(session?.user?._id, pid, session?.token);
+
 
   const downloadProjectImages = useDownloadProject();
   const processProject = useProcessProject();
@@ -69,20 +75,20 @@ export default function Project({
   const [waitingForPreview, setWaitingForPreview] = useState<string>("");
   const [showCancel, setShowCancel] = useState<boolean>(false);
 
-  const totalProcessingSteps =
-    (project.data?.tools.length ?? 0) * (project.data?.imgs.length ?? 0);
+
+  //   ALTERAR LÓGICA PARA NOVO FLUXO 
+  // const isReadOnly = searchParams.get("auth") === "view"; 
+
+  const totalProcessingSteps = (project.data?.tools.length ?? 0) * (project.data?.imgs.length ?? 0);
   const projectResults = useGetProjectResults(
-    session?.user?._id ?? "",
-    pid,
+    session?.user?._id ?? "", 
+    pid, 
     session?.token ?? ""
   );
   const qc = useQueryClient();
 
   useLayoutEffect(() => {
-    if (
-      !["edit", "results"].includes(mode) ||
-      !["grid", "carousel"].includes(view)
-    ) {
+    if (!["edit", "results"].includes(mode) || !["grid", "carousel"].includes(view)) {
       router.replace(path);
     }
   }, [mode, view, path, router, projectResults.data]);
@@ -166,17 +172,11 @@ export default function Project({
       </div>
     );
 
-  if (
-    project.isLoading ||
-    !project.data ||
-    projectResults.isLoading ||
-    !projectResults.data
-  )
-    return (
-      <div className="flex justify-center items-center h-screen">
-        <Loading />
-      </div>
-    );
+  if (project.isLoading || !project.data || projectResults.isLoading || !projectResults.data) return (
+    <div className="flex justify-center items-center h-screen">
+      <Loading />
+    </div>
+  );
 
   return (
     <ProjectProvider
@@ -188,9 +188,7 @@ export default function Project({
         {/* Header */}
         <div className="flex flex-col xl:flex-row justify-center items-start xl:items-center xl:justify-between border-b border-sidebar-border py-2 px-2 md:px-3 xl:px-4 h-fit gap-2">
           <div className="flex items-center justify-between w-full xl:w-auto gap-2">
-            <h1 className="text-lg font-semibold truncate">
-              {project.data.name}
-            </h1>
+            <h1 className="text-lg font-semibold truncate">{project.data.name}</h1>
             <div className="flex items-center gap-2 xl:hidden">
               <ViewToggle />
               <ModeToggle />
@@ -203,7 +201,8 @@ export default function Project({
               {mode !== "results" && (
                 <>
                   <Button
-                    disabled={
+                    // RF45: Bloqueia o botão Apply se for apenas leitura OU sem sessão (requer backend)
+                      disabled={
                       project.data.tools.length <= 0 ||
                       waitingForPreview !== "" ||
                       !session
@@ -321,34 +320,30 @@ export default function Project({
             <Progress value={processingProgress} className="w-96" />
             {showCancel && (
               <Button
-                variant={"default"}
+                variant="destructive"
                 className="bg-red-600 hover:bg-red-500 mt-2"
                 onClick={() => {
                   processProject.cancel.mutate(
-                    {
-                      uid: session.user._id,
-                      pid: project.data._id,
-                      token: session.token,
-                      tokenProject:
-                        tokenProject?.length > 0 ? tokenProject : undefined,
+                  {
+                    uid: session.user._id,
+                    pid: project.data._id,
+                    token: session.token,
+                    tokenProject: tokenProject?.length > 0 ? tokenProject : undefined,
+
+                  },
+                  {
+                    onError: (error) => {
+                      toast({
+                        title: "Ups! An error occurred.",
+                        description: error.message,
+                        variant: "destructive",
+                      });
                     },
-                    {
-                      onSuccess: () => {
-                        setProcessing(false);
-                        if (!isMobile) sidebar.setOpen(true);
-                      },
-                      onError: (error) => {
-                        toast({
-                          title: "Ups! An error occurred.",
-                          description: error.message,
-                          variant: "destructive",
-                        });
-                      },
-                    }
-                  );
-                }}
-              >
-                <X strokeWidth={2.5} />
+                  }
+                ); 
+              }}
+            >
+                <X className="h-4 w-4" strokeWidth={2.5} />
                 Cancel
               </Button>
             )}

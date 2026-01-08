@@ -100,7 +100,7 @@ export function ShareProjectDialog({
               <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto justify-end">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <button className="flex items-center gap-2 text-base text-zinc hover:text-black-300 transition-colors font-medium">
+                    <button className="flex items-center gap-2 text-base text-zinc hover:text-black transition-colors font-medium">
                       {sharePermission === "edit" ? "Editar" : "Visualizar"}
                       <ChevronDown className="h-4 w-4" />
                     </button>
@@ -110,6 +110,7 @@ export function ShareProjectDialog({
                     className="bg-white border-blue-700 text-zinc min-w-[140px]"
                   >
                     <DropdownMenuItem
+                    className=""
                       onClick={() => setSharePermission("edit")}
                       
                     >
@@ -127,9 +128,9 @@ export function ShareProjectDialog({
                 <Button
                   onClick={handleGenerateLink}
                   disabled={createShareLink.isPending}
-                  className="gap-2 h-9 sm:h-11 px-4 sm:px-6 bg-blue hover:bg-white-600 text-blue border-0 text-sm sm:text-base"
+                  className="gap-2 h-9 sm:h-11 px-4 sm:px-6 bg-primary text-white border border-blue hover:bg-white hover:text-primary transition-all duration-200 text-sm sm:text-base"
                 >
-                  <Copy className="h-3 w-3 sm:h-4 sm:w-4" />
+                <Copy className="h-3 w-3 sm:h-4 sm:w-4" />
                   {createShareLink.isPending ? "Gerando..." : "Copiar link"}
                 </Button>
               </div>

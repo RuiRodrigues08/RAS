@@ -20,6 +20,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   const updateSession = useUpdateSession();
   const searchParams = useSearchParams();
   const pathname = usePathname();
+  const tokenProject = searchParams.get("token") ?? "";
   
   // Check if accessing a shared project (has ?auth parameter)
   const isSharedProject = searchParams.get("auth") !== null;

@@ -374,25 +374,37 @@ export const addProjectImages = async ({
   pid,
   token,
   images,
+  tokenProject, 
 }: {
   uid: string;
   pid: string;
   token: string;
+  tokenProject?: string;
   images: File[];
 }) => {
+  
+
   for (const image of images) {
     const formData = new FormData();
     formData.append("image", image);
 
+    // 1. Preparar os headers (Authorization + Token de Partilha se existir)
+    const headers: Record<string, string> = {
+      Authorization: `Bearer ${token}`,
+    };
+
+    if (tokenProject) {
+      headers["x-project-token"] = tokenProject;
+    }
+
+    // 2. Enviar o pedido (SEM o Content-Type manual)
     const response = await api.post(`/projects/${uid}/${pid}/img`, formData, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "multipart/form-data",
-      },
+      headers: headers, 
     });
 
-    if (response.status !== 201 || !response.data)
+    if (response.status !== 201) {
       throw new Error("Failed to upload image: " + image.name);
+    }
   }
 };
 
