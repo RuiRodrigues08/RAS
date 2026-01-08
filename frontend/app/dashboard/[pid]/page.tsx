@@ -160,8 +160,12 @@ export default function Project({
           className="w-fit max-w-[40rem] text-wrap truncate"
         >
           <OctagonAlert className="size-4" />
-          <AlertTitle>{project.error.name}</AlertTitle>
-          <AlertDescription>{project.error.message}</AlertDescription>
+          <AlertTitle>
+            {projectIsShared ? "Link Expirado ou Inválido" : project.error.name}
+          </AlertTitle>
+          <AlertDescription>
+            {projectIsShared ? "O link de partilha deste projeto expirou ou é inválido." : project.error.message}
+          </AlertDescription>
         </Alert>
       </div>
     );
