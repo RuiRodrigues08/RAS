@@ -13,6 +13,7 @@ export default function ObjectAITool({ disabled }: { disabled: boolean }) {
       label="AI Object Detection"
       isPremium
       noParams
+      helpFirst
       helpDescription="This tool uses an AI model to detect and highlight objects in your image."
       helpMediaSrc="/gifs/Gif-DetetarObjeto.gif"
     />
