@@ -81,9 +81,10 @@ export default function Project({
 
   const totalProcessingSteps = (project.data?.tools.length ?? 0) * (project.data?.imgs.length ?? 0);
   const projectResults = useGetProjectResults(
-    session?.user?._id ?? "", 
+    session?.user?._id, 
     pid, 
-    session?.token ?? ""
+    session?.token,
+    tokenProject
   );
   const qc = useQueryClient();
 
@@ -250,10 +251,12 @@ export default function Project({
                     : downloadProjectResults
                   ).mutate(
                     {
-                      uid: session.user._id,
-                      pid: project.data._id,
-                      token: session.token,
-                      projectName: project.data.name,
+                      uid: session?.user?._id,
+                      pid: project.data?._id,
+                      token: session?.token,
+                      projectName: project.data?.name,
+                      tokenProject: 
+                        tokenProject?.length > 0 ? tokenProject : undefined,
                     },
                     {
                       onSuccess: () => {

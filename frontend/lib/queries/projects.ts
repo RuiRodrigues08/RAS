@@ -58,11 +58,12 @@ export const useGetSocket = (token: string) => {
 export const useGetProjectResults = (
   uid: string,
   pid: string,
-  token: string
+  token: string,
+  tokenProject?: string
 ) => {
   return useQuery({
-    queryKey: ["projectResults", uid, pid, token],
-    queryFn: () => fetchProjectResults(uid, pid, token),
+    queryKey: ["projectResults", uid, pid, token, tokenProject],
+    queryFn: () => fetchProjectResults(uid, pid, token, tokenProject),
   });
 };
 

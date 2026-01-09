@@ -108,7 +108,6 @@ router.get(
   "/:user/:project/process",
   auth.checkProjectTokenOrUser,
   function (req, res, next) {
-    // Aqui passamos o responseType arraybuffer juntamente com os headers
     axios
       .get(
         projectsURL + `${req.params.user}/${req.params.project}/process`,
@@ -141,6 +140,8 @@ router.get(
       );
   }
 );
+
+
 
 /**
  * Create new user's project

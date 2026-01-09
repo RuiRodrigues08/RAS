@@ -28,7 +28,6 @@ const Result = require("../controllers/result");
 const Preview = require("../controllers/preview");
 const ShareLink = require("../controllers/sharelink");
 const { handleShareToken } = require("../middlewares/handleShareToken");
-
 const {
   get_image_docker,
   get_image_host,
@@ -483,8 +482,8 @@ router.get("/:user/:project/process/url", async (req, res, next) => {
 
     for (let r of results) {
       const resp = await get_image_host(
-        r.user_id,
-        r.project_id,
+        req.projectOwner,
+        req.params.project,
         "out",
         r.img_key
       );
