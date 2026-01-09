@@ -19,6 +19,7 @@ import { useProjectInfo } from "@/providers/project-provider";
 import { useSession } from "@/providers/session-provider";
 import { useToast } from "@/hooks/use-toast";
 import { useSearchParams } from "next/navigation";
+import { useRealTimeProject } from "@/hooks/use-real-time-project";
 
 export function AddImagesDialog() {
   const searchParams = useSearchParams();
@@ -30,6 +31,7 @@ export function AddImagesDialog() {
   const { toast } = useToast();
   const { _id: pid } = useProjectInfo();
   const session = useSession();
+  const { sendUpdate } = useRealTimeProject(pid, session?.token ?? "");
 
   const addImages = useAddProjectImages(
     session?.user?._id ?? "",
@@ -82,6 +84,10 @@ export function AddImagesDialog() {
             title: "Images added successfully.", 
             description: `${filesToSend.length} image(s) uploaded.`
           });
+          
+          // RNF53 - Broadcast change manually since REST API doesn't
+          sendUpdate('add-image', { count: filesToSend.length });
+
           setSelectedFiles([]);
           setOpen(false);
         },

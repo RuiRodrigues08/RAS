@@ -87,16 +87,10 @@ export const useAddProjectImages = (
   return useMutation({
     mutationFn: addProjectImages, 
     onSuccess: (_, variables) => { 
-      
-      
+      // Invalidate all relevant queries to refresh the UI
       qc.invalidateQueries({ queryKey: ["project", uid, pid, token] });
-      qc.invalidateQueries({ queryKey: ["projectImages", uid, pid, token] });
-
-    
-      if (variables.tokenProject) {
-         qc.invalidateQueries({ queryKey: ["sharedProject"] }); 
-        
-      }
+      qc.invalidateQueries({ queryKey: ["sharedProject"] });
+      qc.invalidateQueries({ queryKey: ["projectImages"] });
     },
   });
 };

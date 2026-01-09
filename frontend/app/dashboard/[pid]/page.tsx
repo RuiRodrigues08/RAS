@@ -34,6 +34,7 @@ import { Transition } from "@headlessui/react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Download, LoaderCircle, OctagonAlert, Play, X } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useRealTimeProject } from "@/hooks/use-real-time-project";
 
 
 export default function Project({
@@ -47,14 +48,15 @@ export default function Project({
   const searchParams = useSearchParams();
   const tokenProject = searchParams.get("token") ?? "";
   
-  const projectIsShared = tokenProject.length>0;
-  const project = projectIsShared ? useGetSharedProject(tokenProject, pid, session.token ): useGetProject(
-    session?.user?._id,
-    pid,
-    session?.token
-  );
+  const projectIsShared = tokenProject.length > 0;
+  
+  const sharedProjectQuery = useGetSharedProject(tokenProject, pid, session.token, projectIsShared);
+  const userProjectQuery = useGetProject(session?.user?._id, pid, session?.token, !projectIsShared);
 
+  const project = projectIsShared ? sharedProjectQuery : userProjectQuery;
 
+  // Init Real Time Hook for Tool Updates (general listener for this page)
+  const { activeUsers } = useRealTimeProject(pid, session?.token ?? "");
 
   const downloadProjectImages = useDownloadProject();
   const processProject = useProcessProject();
@@ -143,6 +145,7 @@ export default function Project({
     sidebar,
     isMobile,
     projectResults,
+    tokenProject,
   ]);
 
   useEffect(() => {
@@ -248,14 +251,16 @@ export default function Project({
               <Button
                 variant="outline"
                 className="px-3"
-                disabled={!session}
+                // Enabled for guests too
                 onClick={() => {
                   (mode === "edit"
                     ? downloadProjectImages
                     : downloadProjectResults
                   ).mutate(
                     {
-                      uid: session?.user?._id,
+                      // Use project owner ID instead of session ID, as guests don't have session.
+                      // The backend uses this ID to locate the project folder.
+                      uid: project.data?.user_id ?? session?.user?._id ?? "", 
                       pid: project.data?._id,
                       token: session?.token,
                       projectName: project.data?.name,

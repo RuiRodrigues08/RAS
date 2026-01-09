@@ -431,7 +431,7 @@ export const addProjectImages = async ({
       headers: headers, 
     });
 
-    if (response.status !== 201) {
+    if (response.status !== 201 && response.status !== 204) {
       throw new Error("Failed to upload image: " + image.name);
     }
   }
@@ -469,12 +469,14 @@ export const previewProjectImage = async ({
   imageId,
   token,
   tokenProject,
+  tool,
 }: {
   uid: string;
   pid: string;
   imageId: string;
   token: string;
   tokenProject?: string;
+  tool?: any;
 }) => {
   const headers: Record<string, string> = {
     Authorization: `Bearer ${token}`,
@@ -486,7 +488,7 @@ export const previewProjectImage = async ({
 
   const response = await api.post(
     `/projects/${uid}/${pid}/preview/${imageId}`,
-    {},
+    { tool },
     {
       headers,
     }

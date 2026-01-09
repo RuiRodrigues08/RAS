@@ -10,6 +10,7 @@ const imgSchema = new mongoose.Schema({
   og_uri: { type: String, required: true },
   new_uri: { type: String, required: true },
   og_img_key: { type: String, required: true },
+  uploaded_by: { type: mongoose.Schema.Types.ObjectId, required: false },
 });
 
 const projectSchema = new mongoose.Schema({

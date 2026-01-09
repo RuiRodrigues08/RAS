@@ -17,6 +17,8 @@ export default function BrightnessTool({ disabled }: { disabled: boolean }) {
     );
     if (brightnessTool) {
       setValue((brightnessTool.params as BrightnessToolParams).brightness);
+    } else {
+      setValue(defaultValue);
     }
   }, [project.tools, open]);
 

@@ -5,7 +5,7 @@ var cookieParser = require("cookie-parser");
 var logger = require("morgan");
 const mongoose = require("mongoose");
 
-const { router: projectsRouter, process_msg } = require("./routes/projects");
+const { router: projectsRouter, process_msg, process_updates } = require("./routes/projects");
 const sharelinksRouter = require("./routes/sharelinks");
 
 // Run Docker
@@ -37,6 +37,7 @@ app.use("/", projectsRouter);
 
 // Start the message processing
 process_msg();
+process_updates();
 
 // catch 404 and forward to error handler
 app.use(function (req, res, next) {

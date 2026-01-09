@@ -30,6 +30,9 @@ export default function BorderTool({ disabled }: { disabled: boolean }) {
       const params = borderTool.params as BorderToolParams;
       setWidth(params.borderWidth);
       setColor(rgbToHex(params.r, params.g, params.b));
+    } else {
+      setWidth(defaultWidth);
+      setColor(defaultColor);
     }
   }, [project.tools, open]);
 

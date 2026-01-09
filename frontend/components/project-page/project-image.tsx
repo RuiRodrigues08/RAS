@@ -28,6 +28,8 @@ import { useSession } from "@/providers/session-provider";
 import { useToast } from "@/hooks/use-toast";
 import type { ProjectImage } from "@/lib/projects";
 import { useSearchParams } from "next/navigation";
+import { useRealTimeProject } from "@/hooks/use-real-time-project";
+
 interface ImageItemProps {
   image: ProjectImage;
   animation?: boolean;
@@ -42,6 +44,8 @@ export function ProjectImage({ image, animation = true }: ImageItemProps) {
 
   const { _id: pid } = useProjectInfo();
   const session = useSession();
+  const { sendUpdate } = useRealTimeProject(pid, session.token);
+
   const deleteImage = useDeleteProjectImages(
     session.user._id,
     pid as string,
@@ -90,15 +94,13 @@ export function ProjectImage({ image, animation = true }: ImageItemProps) {
         </ContextMenuTrigger>
         <ContextMenuContent>
           <DialogTrigger asChild onClick={(e) => e.stopPropagation()}>
-            {mode !== "results" && (
-              <ContextMenuItem
-                className="flex justify-between"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <span>Delete</span>
-                <Trash className="size-4" />
-              </ContextMenuItem>
-            )}
+            <ContextMenuItem
+              className="flex justify-between"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <span>Delete</span>
+              <Trash className="size-4" />
+            </ContextMenuItem>
           </DialogTrigger>
           <ContextMenuItem
             className="flex justify-between"
@@ -152,6 +154,8 @@ export function ProjectImage({ image, animation = true }: ImageItemProps) {
                     toast({
                       title: `Image ${image.name} deleted successfully.`,
                     });
+                    // RNF53 - Broadcast change
+                    sendUpdate('remove-image', {}); 
                   },
                   onError: (error) => {
                     toast({

@@ -18,6 +18,7 @@ const queues = {
     'people_ai': 'people_ai_queue',
     'watermark': 'watermark_queue',
     'project': 'project_queue',
+    'project_updates': 'project_updates_queue',
     'ws': 'ws_queue'
 }
 
@@ -37,12 +38,27 @@ function send_msg_tool(msg_id, timestamp, og_img_uri, new_img_uri, tool, params)
     send_rabbit_msg(msg, queue);
 }
 
-function send_msg_client(msg_id, timestamp, user) {
+function send_msg_client(msg_id, timestamp, user, project_id) {
     const queue = queues['ws'];
     const msg = {
         "messageId": msg_id,
         "timestamp": timestamp,
         "user": user,
+        "projectId": project_id,
+        "status": 'success'
+    };
+
+    send_rabbit_msg(msg, queue);
+}
+
+function send_project_update(project_id, action, content) {
+    const queue = queues['ws'];
+    const msg = {
+        "messageId": "project-update",
+        "timestamp": new Date().toISOString(),
+        "projectId": project_id,
+        "action": action,
+        "content": content,
         "status": 'success'
     };
 
@@ -94,4 +110,8 @@ function read_msg(callback){
     read_rabbit_msg(queues['project'], callback);
 }
 
-module.exports = { send_msg_tool, send_msg_client, send_msg_client_error, send_msg_client_preview, send_msg_client_preview_error, read_msg };
+function read_update_msg(callback){
+    read_rabbit_msg(queues['project_updates'], callback);
+}
+
+module.exports = { send_msg_tool, send_msg_client, send_project_update, send_msg_client_error, send_msg_client_preview, send_msg_client_preview_error, read_msg, read_update_msg };

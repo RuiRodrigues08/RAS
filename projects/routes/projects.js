@@ -16,10 +16,12 @@ const { v4: uuidv4 } = require("uuid");
 const {
   send_msg_tool,
   send_msg_client,
+  send_project_update,
   send_msg_client_error,
   send_msg_client_preview,
   send_msg_client_preview_error,
   read_msg,
+  read_update_msg,
 } = require("../utils/project_msg");
 
 const Project = require("../controllers/project");
@@ -71,6 +73,93 @@ function advanced_tool_num(project) {
   ans *= project.imgs.length;
 
   return ans;
+}
+
+function process_updates() {
+  read_update_msg(async (msg) => {
+    try {
+      const msg_content = JSON.parse(msg.content.toString());
+      const { projectId, action, content } = msg_content;
+
+      console.log(`Processing update for project ${projectId}: ${action}`);
+      
+      // Basic implementation for demonstration of RNF53 (Concurrency via Queue)
+      if (action === 'update-project-name') {
+         await Project.updateById({ name: content.name }, projectId);
+      } else if (action === 'update-tool') {
+        const { toolId, params } = content;
+        
+        // Robust update handling both ID and Procedure name
+        const project = await Project.getById(projectId);
+        if (project) {
+            const toolIndex = project.tools.findIndex(t => 
+                (t._id && t._id.toString() === toolId) || t.procedure === toolId
+            );
+            
+            if (toolIndex > -1) {
+                project.tools[toolIndex].params = params;
+                await project.save();
+                console.log(`Tool ${toolId} updated via queue`);
+            } else {
+                console.log(`Tool ${toolId} not found in project ${projectId}`);
+            }
+        }
+      } else if (action === 'add-tool') {
+        const { tool } = content;
+        
+        try {
+            const project = await Project.getById(projectId);
+            if (project) {
+                 // Ensure position is correct if not provided (though queue ensures serial, so length is safe)
+                 if (tool.position === undefined) {
+                     tool.position = project.tools.length;
+                 }
+                 
+                project.tools.push(tool);
+                await project.save();
+                console.log(`Tool ${tool.procedure} added via queue to project ${projectId}`);
+            }
+        } catch (e) {
+            console.error(`Error adding tool via queue: ${e.message}`);
+        }
+      } else if (action === 'remove-tool') {
+        const { toolId } = content;
+        try {
+            const project = await Project.getById(projectId);
+            if (project) {
+                 const initialLength = project.tools.length;
+                 project.tools = project.tools.filter(t => 
+                    !((t._id && t._id.toString() === toolId) || t.procedure === toolId)
+                 );
+                 
+                 if (project.tools.length < initialLength) {
+                     await project.save();
+                     console.log(`Tool ${toolId} removed via queue from project ${projectId}`);
+                 } else {
+                     console.log(`Tool ${toolId} not found for removal in project ${projectId}`);
+                 }
+            }
+        } catch (e) {
+             console.error(`Error removing tool via queue: ${e.message}`);
+        }
+      } else if (action === 'clear-tools') {
+          try {
+              const project = await Project.getById(projectId);
+              if (project) {
+                  project.tools = [];
+                  await project.save();
+                  console.log(`Cleared all tools via queue from project ${projectId}`);
+              }
+          } catch (e) {
+              console.error(`Error clearing tools via queue: ${e.message}`);
+          }
+      }
+      // Add other cases as the frontend implements them
+      
+    } catch (e) {
+      console.error("Error applying update", e);
+    }
+  });
 }
 
 function process_msg() {
@@ -207,7 +296,7 @@ function process_msg() {
       if (/preview/.test(msg_id) && next_pos >= project.tools.length) return;
 
       if (!/preview/.test(msg_id))
-        send_msg_client(user_msg_id, timestamp, notificationTarget);
+        send_msg_client(user_msg_id, timestamp, notificationTarget, process.project_id);
 
       if (
         !/preview/.test(msg_id) &&
@@ -523,20 +612,16 @@ router.post("/:user/:project/preview/:img", async (req, res, next) => {
 
     if (!project) return res.status(404).jsonp("Project not found");
 
-    const prev_preview = await Preview.getAll(
-      req.projectOwner,
-      req.params.project
-    );
-
-    for (let p of prev_preview) {
-      await delete_image(
-        req.projectOwner,
-        req.params.project,
-        "preview",
-        p.img_key
-      );
-      await Preview.delete(req.projectOwner, req.params.project, p.img_id);
-    }
+    // Optimization: Clean up previous previews in background - don't wait
+    Preview.getAll(req.projectOwner, req.params.project).then(prev_preview => {
+      if (prev_preview && prev_preview.length > 0) {
+        // Fire and forget - don't block the request
+        prev_preview.forEach(p => {
+          delete_image(req.projectOwner, req.params.project, "preview", p.img_key).catch(() => {});
+          Preview.delete(req.projectOwner, req.params.project, p.img_id).catch(() => {});
+        });
+      }
+    }).catch(() => {});
 
     const source_path = `/../images/users/${req.projectOwner}/projects/${req.params.project}/src`;
     const result_path = `/../images/users/${req.projectOwner}/projects/${req.params.project}/preview`;
@@ -555,29 +640,38 @@ router.post("/:user/:project/preview/:img", async (req, res, next) => {
     const og_img_uri = img.og_uri;
     const img_id = img._id;
 
-    const resp = await get_image_docker(
-      req.projectOwner,
-      req.params.project,
-      "src",
-      img.og_img_key
-    );
-    const url = resp.data.url;
+    // OPTIMIZATION: Check if file already exists locally to avoid downloading from Docker/MinIO every time
+    if (!fs.existsSync(og_img_uri)) {
+        const resp = await get_image_docker(
+          req.projectOwner,
+          req.params.project,
+          "src",
+          img.og_img_key
+        );
+        const url = resp.data.url;
 
-    const img_resp = await axios.get(url, { responseType: "stream" });
-    const writer = fs.createWriteStream(og_img_uri);
+        const img_resp = await axios.get(url, { responseType: "stream" });
+        const writer = fs.createWriteStream(og_img_uri);
 
-    await new Promise((resolve, reject) => {
-      writer.on("finish", resolve);
-      writer.on("error", reject);
-      img_resp.data.pipe(writer);
-    });
+        await new Promise((resolve, reject) => {
+          writer.on("finish", resolve);
+          writer.on("error", reject);
+          img_resp.data.pipe(writer);
+        });
+    }
 
     const img_name_parts = img.new_uri.split("/");
     const img_name = img_name_parts[img_name_parts.length - 1];
 
     const new_img_uri = `./images/users/${req.projectOwner}/projects/${req.params.project}/preview/${img_name}`;
 
-    const tool = project.tools.filter((t) => t.position == 0)[0];
+    let tool;
+    if (req.body.tool) {
+      tool = req.body.tool;
+    } else {
+      tool = project.tools.filter((t) => t.position == 0)[0];
+    }
+    
     if (!tool) return res.status(400).jsonp("No tools configured for preview");
 
     const tool_name = tool.procedure;
@@ -620,20 +714,30 @@ router.post(
   upload.single("image"),
   async (req, res, next) => {
     if (!req.file) {
+      console.error("ADD-IMAGE ERROR: No file found in request");
       res.status(400).jsonp("No file found");
       return;
     }
 
     try {
+      if (!req.projectOwner) {
+         console.error("ADD-IMAGE ERROR: req.projectOwner is missing!", req.params);
+      }
       const project = await Project.getOne(
         req.projectOwner,
         req.params.project
       );
+      if (!project) {
+        console.error("ADD-IMAGE ERROR: Project not found", req.projectOwner, req.params.project);
+        // Should probably return 404 here, but let's see why 400 happens
+      }
+
       const same_name_img = project.imgs.filter(
         (i) => path.basename(i.og_uri) == req.file.originalname
       );
 
       if (same_name_img.length > 0) {
+        console.error("ADD-IMAGE ERROR: Duplicate image name", req.file.originalname);
         return res
           .status(400)
           .jsonp("This project already has an image with that name.");
@@ -657,15 +761,28 @@ router.post(
       const og_uri = `./images/users/${req.projectOwner}/projects/${req.params.project}/src/${req.file.originalname}`;
       const new_uri = `./images/users/${req.projectOwner}/projects/${req.params.project}/out/${req.file.originalname}`;
 
-      project["imgs"].push({
+      const newImage = {
         og_uri: og_uri,
         new_uri: new_uri,
         og_img_key: og_key,
-      });
+        uploaded_by: req.requestorId || req.projectOwner,
+      };
 
-      await Project.update(req.projectOwner, req.params.project, project);
+      // RNF53 - Concurrency Management: Use atomic $push to avoid overwriting tools array
+      // Use updateById to work with both owners and guests
+      await Project.updateById(
+        { $push: { imgs: newImage } },
+        req.params.project
+      );
+      
+      // RNF53: Broadcast update to real-time clients
+      send_project_update(req.params.project, "add-image", {
+         // No content needed? Frontend invalidates queries on add-image
+      });
+      
       res.sendStatus(204);
-    } catch (_) {
+    } catch (e) {
+      console.error(e);
       res.status(501).jsonp(`Error adding image`);
     }
   }
@@ -960,16 +1077,50 @@ router.delete("/:user/:project", async (req, res, next) => {
 router.delete("/:user/:project/img/:img", async (req, res, next) => {
   try {
     const project = await Project.getOne(req.projectOwner, req.params.project);
+    if (!project) {
+        console.error("DELETE-IMAGE ERROR: Project not found", req.projectOwner, req.params.project);
+        return res.status(404).jsonp("Project not found");
+    }
+
     const img = project["imgs"].filter((i) => i._id == req.params.img)[0];
 
-    await delete_image(
-      req.projectOwner,
-      req.params.project,
-      "src",
-      img.og_img_key
-    );
-    project["imgs"].remove(img);
+    if (!img) {
+         console.error("DELETE-IMAGE ERROR: Image not found in project", req.params.img);
+         return res.status(404).jsonp("Image not found");
+    }
 
+    // Verificar se o utilizador tem permissão para eliminar:
+    // - O dono do projeto pode sempre eliminar
+    // - Quem fez upload (img.uploaded_by) também pode eliminar
+    const requestorId = req.requestorId || req.params.user;
+    const isOwner = req.projectOwner === requestorId; // Dono do projeto
+    const isUploader = img.uploaded_by && img.uploaded_by.toString() === requestorId;
+    
+    // Log para debug
+    console.log("DELETE-IMAGE PERMISSION CHECK:", {
+        requestorId,
+        projectOwner: req.projectOwner,
+        uploadedBy: img.uploaded_by?.toString(),
+        isOwner,
+        isUploader
+    });
+    
+    if (!isOwner && !isUploader) {
+        console.error("DELETE-IMAGE ERROR: User not authorized", requestorId);
+        return res.status(403).jsonp("You can only delete images you uploaded or if you are the project owner");
+    }
+
+    try {
+        await delete_image(
+          req.projectOwner,
+          req.params.project,
+          "src",
+          img.og_img_key
+        );
+    } catch(e) {
+        console.error("DELETE-IMAGE WARNING: Failed to delete from storage (might be missing)", e.message);
+    }
+    
     const results = await Result.getOne(
       req.projectOwner,
       req.params.project,
@@ -982,22 +1133,26 @@ router.delete("/:user/:project/img/:img", async (req, res, next) => {
     );
 
     if (results) {
-      await delete_image(
-        req.projectOwner,
-        req.params.project,
-        "out",
-        results.img_key
-      );
+      try {
+          await delete_image(
+            req.projectOwner,
+            req.params.project,
+            "out",
+            results.img_key
+          );
+      } catch(e) { console.error("DELETE-IMAGE WARNING: Failed to delete result from storage", e.message); }
       await Result.delete(results.user_id, results.project_id, results.img_id);
     }
 
     if (previews) {
-      await delete_image(
-        req.projectOwner,
-        req.params.project,
-        "preview",
-        previews.img_key
-      );
+      try {
+          await delete_image(
+            req.projectOwner,
+            req.params.project,
+            "preview",
+            previews.img_key
+          );
+      } catch(e) { console.error("DELETE-IMAGE WARNING: Failed to delete preview from storage", e.message); }
       await Preview.delete(
         previews.user_id,
         previews.project_id,
@@ -1005,10 +1160,22 @@ router.delete("/:user/:project/img/:img", async (req, res, next) => {
       );
     }
 
-    await Project.update(req.projectOwner, req.params.project, project);
+    // Use atomic $pull to remove image - works with both owners and guests
+    await Project.updateById(
+      { $pull: { imgs: { _id: img._id } } },
+      req.params.project
+    );
+    
+    // RNF53: Broadcast update to real-time clients
+    console.log(`Broadcasting image-delete for project ${req.params.project}`);
+    send_project_update(req.params.project, "remove-image", {
+        img_id: req.params.img
+    });
+
     res.sendStatus(204);
-  } catch (_) {
-    res.status(400).jsonp(`Error deleting image information.`);
+  } catch (err) {
+    console.error("DELETE-IMAGE FATAL ERROR:", err);
+    res.status(400).jsonp(`Error deleting image information: ${err.message}`);
   }
 });
 
@@ -1032,4 +1199,4 @@ router.delete("/:user/:project/tool/:tool", async (req, res, next) => {
   }
 });
 
-module.exports = { router, process_msg };
+module.exports = { router, process_msg, process_updates };

@@ -16,21 +16,24 @@ export const useGetProjects = (uid: string, token: string) => {
   });
 };
 
-export const useGetProject = (uid: string, pid: string, token: string) => {
+export const useGetProject = (uid: string, pid: string, token: string, enabled: boolean = true) => {
   return useQuery({
     queryKey: ["project", uid, pid, token],
     queryFn: () => fetchProject(uid, pid, token),
+    enabled: enabled,
   });
 };
 
 export const useGetSharedProject = (
   tokenproj: string,
   pid: string,
-  token?: string
+  token?: string,
+  enabled: boolean = true
 ) => {
   return useQuery({
     queryKey: ["sharedProject", pid, tokenproj, token],
     queryFn: () => fetchSharedProject(tokenproj, pid, token),
+    enabled: enabled,
   });
 };
 

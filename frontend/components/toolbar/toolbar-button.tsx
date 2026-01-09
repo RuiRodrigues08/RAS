@@ -33,6 +33,7 @@ import {
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
+import { useRealTimeProject } from "@/hooks/use-real-time-project";
 
 interface ToolbarButtonProps {
   open?: boolean;
@@ -81,6 +82,9 @@ export function ToolbarButton({
   const params = useSearchParams();
   const tokenProject = params.get("token") || "";
 
+  // Real-time hook
+  const { sendUpdate } = useRealTimeProject(project._id, session.token);
+
   const addTool = useAddProjectTool(
     session.user._id,
     project._id,
@@ -107,6 +111,15 @@ export function ToolbarButton({
 
   function handleDeleteTool(previewAfter?: boolean) {
     if (prevTool) {
+      // RNF53 - Real-time Collaboration & Concurrency:
+      sendUpdate('remove-tool', {
+          toolId: prevTool._id ?? prevTool.procedure
+      });
+
+      if (previewAfter) {
+        handlePreview();
+      }
+      /*
       deleteTool.mutate(
         {
           uid: session.user._id,
@@ -130,6 +143,7 @@ export function ToolbarButton({
           },
         }
       );
+      */
     }
   }
 
@@ -141,6 +155,7 @@ export function ToolbarButton({
         imageId: currentImage?._id ?? "",
         token: session.token,
         tokenProject: tokenProject?.length > 0 ? tokenProject : undefined,
+        tool: { ...tool, position: 0 },
       },
       {
         onSuccess: () => {
@@ -164,6 +179,16 @@ export function ToolbarButton({
 
   function handleAddTool(preview?: boolean) {
     if (prevTool) {
+      // RNF53 - Real-time Collaboration & Concurrency:
+      // Send message to Socket instead of REST API when updating existing tool
+      sendUpdate('update-tool', {
+          toolId: prevTool._id ?? prevTool.procedure, // Use _id but fallback to procedure name if optimistic
+          params: tool.params
+      });
+      
+      // We manually trigger preview because we bypassed the mutation onSuccess
+      if (preview) handlePreview();
+      /*
       updateTool.mutate(
         {
           uid: session.user._id,
@@ -186,7 +211,19 @@ export function ToolbarButton({
           },
         }
       );
+      */
     } else {
+      // RNF53 - Real-time Collaboration & Concurrency:
+      // Send message to Socket instead of REST API when adding new tool
+      sendUpdate('add-tool', {
+          tool: {
+              ...tool,
+              position: project.tools.length,
+          }
+      });
+
+      if (preview) handlePreview();
+      /*
       addTool.mutate(
         {
           uid: session.user._id,
@@ -211,6 +248,7 @@ export function ToolbarButton({
           },
         }
       );
+      */
     }
     setOpen(false);
   }
