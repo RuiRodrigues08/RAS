@@ -43,6 +43,8 @@ function read_rabbit_msg(queue, callback) {
             channel.assertQueue(queue, { durable: true }, (err_queue, q) => {
                 if(err_queue) throw err_queue;
 
+                channel.bindQueue(q.queue, exchange, queue);
+
                 channel.consume(q.queue, (msg) => {
                     if(msg != null){
                         callback(msg);

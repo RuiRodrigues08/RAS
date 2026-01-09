@@ -15,6 +15,8 @@ export default function RotateTool({ disabled }: { disabled: boolean }) {
     const rotateTool = project.tools.find((t) => t.procedure === "rotate");
     if (rotateTool) {
       setValue((rotateTool.params as RotateToolParams).degrees);
+    } else {
+      setValue(defaultValue);
     }
   }, [project.tools, open]);
 

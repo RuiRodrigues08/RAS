@@ -1,9 +1,27 @@
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { useClearProjectTools } from "@/lib/mutations/projects";
+import { useRealTimeProject } from "@/hooks/use-real-time-project";
 import { useProjectInfo } from "@/providers/project-provider";
 import { useSession } from "@/providers/session-provider";
 import { Eraser } from "lucide-react";
 import { useSearchParams } from "next/navigation";
-import { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Button } from "../ui/button";
 import {
   Dialog,
@@ -30,48 +48,149 @@ import TextAITool from "./text-ai-tool";
 import UpgradeAITool from "./upgrade-ai-tool";
 import WatermarkTool from "./watermark-tool";
 
+const TOOL_COMPONENTS: Record<string, React.ElementType> = {
+  brightness: BrightnessTool,
+  contrast: ContrastTool,
+  saturation: SaturationTool,
+  binarization: BinarizationTool,
+  rotate: RotateTool,
+  crop: CropTool,
+  resize: ResizeTool,
+  border: BorderTool,
+  watermark: WatermarkTool,
+  bgRemoval: BgRemovalAITool,
+  cropAI: CropAITool,
+  objectAI: ObjectAITool,
+  peopleAI: PeopleAITool,
+  textAI: TextAITool,
+  upgradeAI: UpgradeAITool,
+};
+
+const DEFAULT_ORDER = [
+  "brightness",
+  "contrast",
+  "saturation",
+  "binarization",
+  "rotate",
+  "crop",
+  "resize",
+  "border",
+  "watermark",
+  "bgRemoval",
+  "cropAI",
+  "objectAI",
+  "peopleAI",
+  "textAI",
+  "upgradeAI",
+];
+
+function SortableItem(props: { id: string; children: React.ReactNode }) {
+  const { attributes, listeners, setNodeRef, transform, transition } =
+    useSortable({ id: props.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    marginBottom: "8px", // Spacing between items
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+      {props.children}
+    </div>
+  );
+}
+
 export function Toolbar() {
   const searchParams = useSearchParams();
   const view = searchParams.get("view") ?? "grid";
-  const tokenProject = searchParams.get("token") ?? "";
   const project = useProjectInfo();
   const session = useSession();
   const [open, setOpen] = useState<boolean>(false);
+  const { sendUpdate } = useRealTimeProject(project._id, session?.token || "");
+  const [items, setItems] = useState<string[]>(DEFAULT_ORDER);
+
+  useEffect(() => {
+     // Load order from local storage
+     const savedOrder = localStorage.getItem(`tool-order-${session?.user?._id || "guest"}`);
+     if (savedOrder) {
+         try {
+             const parsed = JSON.parse(savedOrder);
+             // Verify if all tools are present (in case of new tools added in updates)
+             const merged = [...parsed];
+             DEFAULT_ORDER.forEach(t => {
+                 if (!merged.includes(t)) merged.push(t);
+             });
+             setItems(merged);
+         } catch(e) {
+             console.error("Failed to parse tool order", e);
+         }
+     }
+  }, [session?.user?._id]);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+        activationConstraint: {
+            distance: 5, // Require slight move to prevent accidental drags on clicks
+        }
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id) {
+      setItems((items) => {
+        const oldIndex = items.indexOf(active.id as string);
+        const newIndex = items.indexOf(over.id as string);
+        const newItems = arrayMove(items, oldIndex, newIndex);
+        
+        // Save to local storage
+        localStorage.setItem(`tool-order-${session?.user?._id || "guest"}`, JSON.stringify(newItems));
+        
+        return newItems;
+      });
+    }
+  }
 
   // Disable if grid view OR if auth=view (read-only)
   const disabled = view === "grid" || project.permission === "VIEWER";
 
-  const clearTools = useClearProjectTools(
-    session?.user?._id,
-    project._id,
-    session?.token
-  );
-
   return (
     <div className="flex h-full w-14 flex-col justify-between items-center border-r bg-background p-2">
-      <div className="flex flex-col gap-2">
-        <span className="text-sm text-gray-500">Tools</span>
-        <BrightnessTool disabled={disabled} />
-        <ContrastTool disabled={disabled} />
-        <SaturationTool disabled={disabled} />
-        <BinarizationTool disabled={disabled} />
-        <RotateTool disabled={disabled} />
-        <CropTool disabled={disabled} />
-        <ResizeTool disabled={disabled} />
-        <BorderTool disabled={disabled} />
-        <WatermarkTool disabled={disabled} />
-        <BgRemovalAITool disabled={disabled} />
-        <CropAITool disabled={disabled} />
-        <ObjectAITool disabled={disabled} />
-        <PeopleAITool disabled={disabled} />
-        <TextAITool disabled={disabled} />
-        <UpgradeAITool disabled={disabled} />
+      <div className="flex flex-col gap-2 w-full items-center overflow-y-auto no-scrollbar pb-2">
+        <span className="text-sm text-gray-500 mb-2">Tools</span>
+        
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+        >
+          <SortableContext
+            items={items}
+            strategy={verticalListSortingStrategy}
+          >
+            {items.map((key) => {
+                const Component = TOOL_COMPONENTS[key];
+                if (!Component) return null;
+                return (
+                    <SortableItem key={key} id={key}>
+                        <Component disabled={disabled} />
+                    </SortableItem>
+                );
+            })}
+          </SortableContext>
+        </DndContext>
+
       </div>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogTrigger asChild>
           <Button
             variant="outline"
-            className="text-red-400 size-8"
+            className="text-red-400 size-8 mt-2"
             disabled={project.tools.length === 0}
           >
             <Eraser />
@@ -90,14 +209,8 @@ export function Toolbar() {
               disabled={!session}
               onClick={() => {
                 if (!session) return;
-                clearTools.mutate({
-                  uid: session.user._id,
-                  pid: project._id,
-                  toolIds: project.tools.map((t) => t._id),
-                  token: session.token,
-                  tokenProject:
-                    tokenProject.length > 0 ? tokenProject : undefined,
-                });
+                // RNF53 - Real-time Collaboration:
+                sendUpdate('clear-tools', {});
                 setOpen(false);
               }}
             >

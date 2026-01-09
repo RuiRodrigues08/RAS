@@ -6,6 +6,7 @@ import { ModeToggle } from "@/components/project-page/mode-toggle";
 import { ProjectImageList } from "@/components/project-page/project-image-list";
 import { ViewToggle } from "@/components/project-page/view-toggle";
 import { ShareProjectDialog } from "@/components/project-page/share-project-dialog";
+import { CollaboratorsList } from "@/components/project-page/collaborators-list";
 import { Button } from "@/components/ui/button";
 import { Toolbar } from "@/components/toolbar/toolbar";
 import {
@@ -34,6 +35,7 @@ import { Transition } from "@headlessui/react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Download, LoaderCircle, OctagonAlert, Play, X } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useRealTimeProject } from "@/hooks/use-real-time-project";
 
 
 export default function Project({
@@ -47,14 +49,15 @@ export default function Project({
   const searchParams = useSearchParams();
   const tokenProject = searchParams.get("token") ?? "";
   
-  const projectIsShared = tokenProject.length>0;
-  const project = projectIsShared ? useGetSharedProject(tokenProject, pid, session.token ): useGetProject(
-    session?.user?._id,
-    pid,
-    session?.token
-  );
+  const projectIsShared = tokenProject.length > 0;
+  
+  const sharedProjectQuery = useGetSharedProject(tokenProject, pid, session.token, projectIsShared);
+  const userProjectQuery = useGetProject(session?.user?._id, pid, session?.token, !projectIsShared);
 
+  const project = projectIsShared ? sharedProjectQuery : userProjectQuery;
 
+  // Init Real Time Hook for Tool Updates (general listener for this page)
+  const { activeUsers } = useRealTimeProject(pid, session?.token ?? "");
 
   const downloadProjectImages = useDownloadProject();
   const processProject = useProcessProject();
@@ -143,6 +146,7 @@ export default function Project({
     sidebar,
     isMobile,
     projectResults,
+    tokenProject,
   ]);
 
   useEffect(() => {
@@ -194,6 +198,11 @@ export default function Project({
         <div className="flex flex-col xl:flex-row justify-center items-start xl:items-center xl:justify-between border-b border-sidebar-border py-2 px-2 md:px-3 xl:px-4 h-fit gap-2">
           <div className="flex items-center justify-between w-full xl:w-auto gap-2">
             <h1 className="text-lg font-semibold truncate">{project.data.name}</h1>
+            <CollaboratorsList 
+                projectId={pid}
+                token={session?.token ?? ""}
+                activeUsers={activeUsers}
+            />
             <div className="flex items-center gap-2 xl:hidden">
               <ViewToggle />
               <ModeToggle />
@@ -248,14 +257,16 @@ export default function Project({
               <Button
                 variant="outline"
                 className="px-3"
-                disabled={!session}
+                // Enabled for guests too
                 onClick={() => {
                   (mode === "edit"
                     ? downloadProjectImages
                     : downloadProjectResults
                   ).mutate(
                     {
-                      uid: session?.user?._id,
+                      // Use project owner ID instead of session ID, as guests don't have session.
+                      // The backend uses this ID to locate the project folder.
+                      uid: project.data?.user_id ?? session?.user?._id ?? "", 
                       pid: project.data?._id,
                       token: session?.token,
                       projectName: project.data?.name,

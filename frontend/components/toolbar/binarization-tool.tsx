@@ -17,6 +17,8 @@ export default function BinarizationTool({ disabled }: { disabled: boolean }) {
     );
     if (binarizationTool) {
       setValue((binarizationTool.params as BinarizationToolParams).threshold);
+    } else {
+      setValue(defaultValue);
     }
   }, [project.tools, open]);
 

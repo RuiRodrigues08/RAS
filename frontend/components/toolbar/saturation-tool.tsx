@@ -19,6 +19,8 @@ export default function SaturationTool({ disabled }: { disabled: boolean }) {
       setValue(
         (saturationTool.params as SaturationToolParams).saturationFactor,
       );
+    } else {
+      setValue(defaultValue);
     }
   }, [project.tools, open]);
 

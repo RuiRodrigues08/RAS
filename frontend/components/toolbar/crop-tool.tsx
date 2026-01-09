@@ -40,6 +40,11 @@ export default function CropTool({ disabled }: { disabled: boolean }) {
         setTop((cropTool.params as CropToolParams).top);
         setRight((cropTool.params as CropToolParams).right);
         setBottom((cropTool.params as CropToolParams).bottom);
+      } else {
+        setLeft(defaultValue);
+        setTop(defaultValue);
+        setRight(defaultValue);
+        setBottom(defaultValue);
       }
     }
   }, [project.tools, open]);

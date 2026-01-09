@@ -15,6 +15,8 @@ export default function ContrastTool({ disabled }: { disabled: boolean }) {
     const contrastTool = project.tools.find((t) => t.procedure === "contrast");
     if (contrastTool) {
       setValue((contrastTool.params as ContrastToolParams).contrastFactor);
+    } else {
+      setValue(defaultValue);
     }
   }, [project.tools, open]);
 
