@@ -128,7 +128,8 @@ function process_msg() {
              if (status == "error") {
                 io.to(user).emit("preview-error", msg_content);
             } else {
-                io.to(user).emit("preview-update", msg_content);
+                // Emit "preview-ready" - this is what the frontend listens for
+                io.to(user).emit("preview-ready", msg_content);
             }
         } else if (msg_id === 'project-update') {
             // Logic for project structural updates

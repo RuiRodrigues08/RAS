@@ -4,8 +4,6 @@ import {
   Carousel,
   CarouselContent,
   CarouselItem,
-  CarouselNext,
-  CarouselPrevious,
   type CarouselApi,
 } from "@/components/ui/carousel";
 import { useToast } from "@/hooks/use-toast";
@@ -77,12 +75,13 @@ export function ProjectImageList({
 
       socket.data.on("preview-ready", (msg) => {
         if (active) {
-          const msg_content = JSON.parse(msg) as {
+          // msg is the full object from wsGateway, img_url contains the JSON string with urls
+          const urls = JSON.parse(msg.img_url) as {
             imageUrl: string;
             textResults: string[];
           };
-          const url = msg_content.imageUrl;
-          const textResults = msg_content.textResults;
+          const url = urls.imageUrl;
+          const textResults = urls.textResults;
           setPreviewImage(url);
           setPreviewText(textResults);
           setPreviewOpen(true);
@@ -241,12 +240,7 @@ export function ProjectImageList({
                     </CarouselItem>
                   ))}
               </CarouselContent>
-              <CarouselPrevious className="hidden sm:flex" />
-              <CarouselNext className="hidden sm:flex" />
             </Carousel>
-            <div className="py-2 text-center text-sm text-muted-foreground">
-              {current} / {count}
-            </div>
           </div>
         )}
       </div>

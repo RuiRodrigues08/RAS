@@ -91,7 +91,7 @@ function SortableItem(props: { id: string; children: React.ReactNode }) {
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    marginBottom: "8px", // Spacing between items
+    marginBottom: "8px",
   };
 
   return (
@@ -111,28 +111,26 @@ export function Toolbar() {
   const [items, setItems] = useState<string[]>(DEFAULT_ORDER);
 
   useEffect(() => {
-     // Load order from local storage
-     const savedOrder = localStorage.getItem(`tool-order-${session?.user?._id || "guest"}`);
-     if (savedOrder) {
-         try {
-             const parsed = JSON.parse(savedOrder);
-             // Verify if all tools are present (in case of new tools added in updates)
-             const merged = [...parsed];
-             DEFAULT_ORDER.forEach(t => {
-                 if (!merged.includes(t)) merged.push(t);
-             });
-             setItems(merged);
-         } catch(e) {
-             console.error("Failed to parse tool order", e);
-         }
-     }
+    const savedOrder = localStorage.getItem(`tool-order-${session?.user?._id || "guest"}`);
+    if (savedOrder) {
+      try {
+        const parsed = JSON.parse(savedOrder);
+        const merged = [...parsed];
+        DEFAULT_ORDER.forEach(t => {
+          if (!merged.includes(t)) merged.push(t);
+        });
+        setItems(merged);
+      } catch(e) {
+        console.error("Failed to parse tool order", e);
+      }
+    }
   }, [session?.user?._id]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
-        activationConstraint: {
-            distance: 5, // Require slight move to prevent accidental drags on clicks
-        }
+      activationConstraint: {
+        distance: 5,
+      }
     }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
@@ -148,7 +146,6 @@ export function Toolbar() {
         const newIndex = items.indexOf(over.id as string);
         const newItems = arrayMove(items, oldIndex, newIndex);
         
-        // Save to local storage
         localStorage.setItem(`tool-order-${session?.user?._id || "guest"}`, JSON.stringify(newItems));
         
         return newItems;
@@ -156,7 +153,6 @@ export function Toolbar() {
     }
   }
 
-  // Disable if grid view OR if auth=view (read-only)
   const disabled = view === "grid" || project.permission === "VIEWER";
 
   return (
@@ -174,13 +170,13 @@ export function Toolbar() {
             strategy={verticalListSortingStrategy}
           >
             {items.map((key) => {
-                const Component = TOOL_COMPONENTS[key];
-                if (!Component) return null;
-                return (
-                    <SortableItem key={key} id={key}>
-                        <Component disabled={disabled} />
-                    </SortableItem>
-                );
+              const Component = TOOL_COMPONENTS[key];
+              if (!Component) return null;
+              return (
+                <SortableItem key={key} id={key}>
+                  <Component disabled={disabled} />
+                </SortableItem>
+              );
             })}
           </SortableContext>
         </DndContext>
@@ -209,7 +205,6 @@ export function Toolbar() {
               disabled={!session}
               onClick={() => {
                 if (!session) return;
-                // RNF53 - Real-time Collaboration:
                 sendUpdate('clear-tools', {});
                 setOpen(false);
               }}

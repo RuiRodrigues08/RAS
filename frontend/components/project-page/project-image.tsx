@@ -94,15 +94,13 @@ export function ProjectImage({ image, animation = true }: ImageItemProps) {
         </ContextMenuTrigger>
         <ContextMenuContent>
           <DialogTrigger asChild onClick={(e) => e.stopPropagation()}>
-            {mode !== "results" && (
-              <ContextMenuItem
-                className="flex justify-between"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <span>Delete</span>
-                <Trash className="size-4" />
-              </ContextMenuItem>
-            )}
+            <ContextMenuItem
+              className="flex justify-between"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <span>Delete</span>
+              <Trash className="size-4" />
+            </ContextMenuItem>
           </DialogTrigger>
           <ContextMenuItem
             className="flex justify-between"

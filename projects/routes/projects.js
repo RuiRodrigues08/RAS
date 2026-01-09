@@ -612,27 +612,16 @@ router.post("/:user/:project/preview/:img", async (req, res, next) => {
 
     if (!project) return res.status(404).jsonp("Project not found");
 
-    // Optimization: Run clean-up in background or ignore errors. 
-    // Do not await individual deletions sequentially.
-    const prev_preview = await Preview.getAll(
-      req.projectOwner,
-      req.params.project
-    );
-
-    // Fire and forget cleanup (or Promise.all if we strictly needed it, but hitting MinIO 10 times is slow)
-    // We can just proceed. The old previews will be overwritten or cleaned up later.
-    // For now, let's parallelize it to be safe but fast.
-    Promise.all(prev_preview.map(p => 
-      delete_image(req.projectOwner, req.params.project, "preview", p.img_key)
-        .catch(err => console.error("Error cleaning preview image:", err))
-    )).then(() => {
-        // Also delete from DB in parallel
-        return Promise.all(prev_preview.map(p => 
-             Preview.delete(req.projectOwner, req.params.project, p.img_id)
-             .catch(e => console.error("Error cleaning preview db:", e))
-        ));
-    });
-
+    // Optimization: Clean up previous previews in background - don't wait
+    Preview.getAll(req.projectOwner, req.params.project).then(prev_preview => {
+      if (prev_preview && prev_preview.length > 0) {
+        // Fire and forget - don't block the request
+        prev_preview.forEach(p => {
+          delete_image(req.projectOwner, req.params.project, "preview", p.img_key).catch(() => {});
+          Preview.delete(req.projectOwner, req.params.project, p.img_id).catch(() => {});
+        });
+      }
+    }).catch(() => {});
 
     const source_path = `/../images/users/${req.projectOwner}/projects/${req.params.project}/src`;
     const result_path = `/../images/users/${req.projectOwner}/projects/${req.params.project}/preview`;
@@ -776,13 +765,15 @@ router.post(
         og_uri: og_uri,
         new_uri: new_uri,
         og_img_key: og_key,
+        uploaded_by: req.requestorId || req.projectOwner,
       };
 
       // RNF53 - Concurrency Management: Use atomic $push to avoid overwriting tools array
-      // Do NOT pass the whole project object back
-      await Project.update(req.projectOwner, req.params.project, {
-        $push: { imgs: newImage }
-      });
+      // Use updateById to work with both owners and guests
+      await Project.updateById(
+        { $push: { imgs: newImage } },
+        req.params.project
+      );
       
       // RNF53: Broadcast update to real-time clients
       send_project_update(req.params.project, "add-image", {
@@ -1098,6 +1089,27 @@ router.delete("/:user/:project/img/:img", async (req, res, next) => {
          return res.status(404).jsonp("Image not found");
     }
 
+    // Verificar se o utilizador tem permissão para eliminar:
+    // - O dono do projeto pode sempre eliminar
+    // - Quem fez upload (img.uploaded_by) também pode eliminar
+    const requestorId = req.requestorId || req.params.user;
+    const isOwner = req.projectOwner === requestorId; // Dono do projeto
+    const isUploader = img.uploaded_by && img.uploaded_by.toString() === requestorId;
+    
+    // Log para debug
+    console.log("DELETE-IMAGE PERMISSION CHECK:", {
+        requestorId,
+        projectOwner: req.projectOwner,
+        uploadedBy: img.uploaded_by?.toString(),
+        isOwner,
+        isUploader
+    });
+    
+    if (!isOwner && !isUploader) {
+        console.error("DELETE-IMAGE ERROR: User not authorized", requestorId);
+        return res.status(403).jsonp("You can only delete images you uploaded or if you are the project owner");
+    }
+
     try {
         await delete_image(
           req.projectOwner,
@@ -1109,14 +1121,6 @@ router.delete("/:user/:project/img/:img", async (req, res, next) => {
         console.error("DELETE-IMAGE WARNING: Failed to delete from storage (might be missing)", e.message);
     }
     
-    // Use Mongoose pull instead of remove if possible, or filter
-    if (project.imgs.pull) {
-        project.imgs.pull(img._id);
-    } else {
-        // Fallback if not a mongoose array (should be)
-        project.imgs = project.imgs.filter(i => i._id.toString() !== req.params.img);
-    }
-
     const results = await Result.getOne(
       req.projectOwner,
       req.params.project,
@@ -1156,7 +1160,11 @@ router.delete("/:user/:project/img/:img", async (req, res, next) => {
       );
     }
 
-    await Project.update(req.projectOwner, req.params.project, project);
+    // Use atomic $pull to remove image - works with both owners and guests
+    await Project.updateById(
+      { $pull: { imgs: { _id: img._id } } },
+      req.params.project
+    );
     
     // RNF53: Broadcast update to real-time clients
     console.log(`Broadcasting image-delete for project ${req.params.project}`);

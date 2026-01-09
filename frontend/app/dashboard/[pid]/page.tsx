@@ -6,7 +6,6 @@ import { ModeToggle } from "@/components/project-page/mode-toggle";
 import { ProjectImageList } from "@/components/project-page/project-image-list";
 import { ViewToggle } from "@/components/project-page/view-toggle";
 import { ShareProjectDialog } from "@/components/project-page/share-project-dialog";
-import { CollaboratorsList } from "@/components/project-page/collaborators-list";
 import { Button } from "@/components/ui/button";
 import { Toolbar } from "@/components/toolbar/toolbar";
 import {
@@ -198,11 +197,6 @@ export default function Project({
         <div className="flex flex-col xl:flex-row justify-center items-start xl:items-center xl:justify-between border-b border-sidebar-border py-2 px-2 md:px-3 xl:px-4 h-fit gap-2">
           <div className="flex items-center justify-between w-full xl:w-auto gap-2">
             <h1 className="text-lg font-semibold truncate">{project.data.name}</h1>
-            <CollaboratorsList 
-                projectId={pid}
-                token={session?.token ?? ""}
-                activeUsers={activeUsers}
-            />
             <div className="flex items-center gap-2 xl:hidden">
               <ViewToggle />
               <ModeToggle />

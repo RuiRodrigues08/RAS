@@ -74,10 +74,10 @@ export const useRealTimeProject = (
           queryClient.setQueriesData({ queryKey: ['project'] }, clearTools);
           queryClient.setQueriesData({ queryKey: ['sharedProject'] }, clearTools);
       } else if (action === 'add-image' || action === 'remove-image') {
-          // Invalidate to refetch project (and images)
-          queryClient.invalidateQueries({ queryKey: ['project'] });
-          queryClient.invalidateQueries({ queryKey: ['sharedProject'] });
-          // Also invalidate results if needed?
+          // Invalidate to refetch project (and images) - force refetch
+          queryClient.invalidateQueries({ queryKey: ['project'], refetchType: 'all' });
+          queryClient.invalidateQueries({ queryKey: ['sharedProject'], refetchType: 'all' });
+          queryClient.invalidateQueries({ queryKey: ['projectImages'], refetchType: 'all' });
       }
   };
 
