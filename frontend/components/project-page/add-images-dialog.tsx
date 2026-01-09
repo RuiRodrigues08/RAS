@@ -37,7 +37,7 @@ export function AddImagesDialog() {
     session?.token ?? ""
   );
 
-  // Limpeza de memória dos previews
+ 
   useEffect(() => {
     return () => {
       selectedFiles.forEach((item) => URL.revokeObjectURL(item.preview));

@@ -643,11 +643,13 @@ export const downloadProjectResults = async ({
   pid,
   projectName,
   token,
+  tokenProject
 }: {
   uid: string;
   pid: string;
   projectName: string;
   token: string;
+  tokenProject?: string;
 }) => {
   const response = await api.get<ArrayBuffer>(
     `/projects/${uid}/${pid}/process`,
@@ -676,7 +678,8 @@ export const downloadProjectResults = async ({
 export const fetchProjectResults = async (
   uid: string,
   pid: string,
-  token: string
+  token: string,
+  tokenProject?: string
 ) => {
   const response = await api.get<{
     imgs: {
@@ -691,7 +694,8 @@ export const fetchProjectResults = async (
     }[];
   }>(`/projects/${uid}/${pid}/process/url`, {
     headers: {
-      Authorization: `Bearer ${token}`,
+      ...(token && { Authorization: `Bearer ${token}`}),
+      ...(tokenProject && { "x-project-token": tokenProject }),
     },
   });
 
