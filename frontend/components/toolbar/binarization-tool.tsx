@@ -35,7 +35,7 @@ export default function BinarizationTool({ disabled }: { disabled: boolean }) {
       disabled={disabled}
       icon={Binary}
       label="Black & White"
-      helpDescription="This tool turns the image in a black and white monocromathic."
+      helpDescription="This tool turns the image into a black and white monochromatic image."
       helpMediaSrc="/gifs/Gif-Black&White.gif"
     >
       <Slider

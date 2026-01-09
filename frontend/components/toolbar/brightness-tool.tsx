@@ -35,7 +35,7 @@ export default function BrightnessTool({ disabled }: { disabled: boolean }) {
       disabled={disabled}
       icon={Sun}
       label="Brightness"
-      helpDescription="This functionality increases/decreases the brightness of your image."
+      helpDescription="This tool increases/decreases the brightness of your image."
       helpMediaSrc="/gifs/Gif-Brilho.gif"
     >
       <Slider
